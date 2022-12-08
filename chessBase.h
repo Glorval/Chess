@@ -1,7 +1,13 @@
-﻿#include <stdint.h>
+﻿#pragma once
+#include <stdint.h>
+
+
+typedef uint8_t uint;
+
+
 //Piece moving errors
-#define ERR_NoPieceToMove (uint8_t) -1
-#define ERR_CannotMoveUntoSelf (uint8_t) -2
+#define ERR_NoPieceToMove (uint) -1
+#define ERR_CannotMoveUntoSelf (uint) -2
 
 //Board constants
 #define setWhiteSquare printf("\33[48;2;148;148;148m")
@@ -19,6 +25,8 @@
 #define BoardDim 8
 #define Type 0
 #define Owner 1
+#define X 0
+#define Y 1
 enum owner{White, Black, Neither};
 enum pieces {Empty, King, Queen, Rook, Bishop, Knight, Pawn};
 const static char piecesSymbol[] = {
@@ -43,15 +51,15 @@ const static char xLables[] = "abcdefgh";
 
 struct board {
 	//x/y orientation
-	uint8_t p[BoardDim][BoardDim][2];
+	uint p[BoardDim][BoardDim][2];
 };
 typedef struct board Board;
 
 struct piece {
 	//Memory optimization? Make them 4 bits
-	uint8_t x;// : 4;
-	uint8_t y;// : 4;
-	uint8_t type;
+	uint x;// : 4;
+	uint y;// : 4;
+	uint type;
 };
 typedef struct piece Piece;
 typedef uint32_t PieceComp;
@@ -59,8 +67,8 @@ typedef uint32_t PieceComp;
 #define Square(x) ((x)*(x))
 
 struct player {
-	Piece* pieces;
-	uint8_t pieceC;
+	Piece pieces[16];
+	uint pieceC;
 };
 typedef struct player Player;
 
@@ -68,23 +76,24 @@ struct game {
 	Board board;
 	Player player[2];
 	//Player black;
-	uint8_t turn;
+	uint turn;
 };
 typedef struct game Game;
 
 //Sets up both players and returns a fresh gamestate
 Game startGame(void);
 void printBoard(Board);
+void printPlayer(Player player);
 
 //For user input, converts 'abcdefgh' & '12345678' into the proper positions
-uint8_t convCharToPos(char inputChar);
+uint convCharToPos(char inputChar);
 
 //mainly used for player inputs, the AI approaches things from a piece's perspective to being with and thus the piece data doesn't need to be sought out.
-Piece findPiecePlayer(Player player, uint8_t xPos, uint8_t yPos);
-Piece findPiece(Game game, uint8_t xPos, uint8_t yPos);
+Piece* findPiecePlayer(Player player, uint xPos, uint yPos);
+Piece* findPiece(Game game, uint xPos, uint yPos);
 
 //returns if successful or not.
-uint8_t movePiece(Game* game, Piece piece, uint8_t newX, uint8_t newY);
+uint movePiece(Game* game, Piece* piece, uint newX, uint newY);
 
 //forces the move, good for if the checking is already done.
-void movePieceForce(Board*, Piece, uint8_t newX, uint8_t newY);
+void movePieceForce(Board*, Piece*, uint newX, uint newY);

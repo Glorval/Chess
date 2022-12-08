@@ -21,9 +21,15 @@
     <ClCompile Include="chessBase.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="AI.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="chessBase.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="AI.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>

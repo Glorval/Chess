@@ -7,10 +7,17 @@
 Game startGame(void) {
 	Game returns = { 0 };
 
+	for (uint cX = 0; cX < BoardDim; cX++) {
+		for (uint cY = 0; cY < BoardDim; cY++) {
+			returns.board.p[cX][cY][Owner] = Neither;
+			returns.board.p[cX][cY][Type] = Empty;
+		}
+	}
+
 	//white setup
 	returns.player[White].pieceC = 16;
-	returns.player[White].pieces = calloc(16, sizeof(Piece));
-	for (uint8_t cPawn = 0; cPawn < 8; cPawn++) {
+	//returns.player[White].pieces = calloc(16, sizeof(Piece));
+	for (uint cPawn = 0; cPawn < 8; cPawn++) {
 		returns.player[White].pieces[cPawn].type = Pawn;
 		returns.player[White].pieces[cPawn].x = cPawn;
 		returns.player[White].pieces[cPawn].y = 1;
@@ -62,8 +69,8 @@ Game startGame(void) {
 
 	//black setup
 	returns.player[Black].pieceC = 16;
-	returns.player[Black].pieces = calloc(16, sizeof(Piece));
-	for (uint8_t cPawn = 0; cPawn < 8; cPawn++) {
+	//returns.player[Black].pieces = calloc(16, sizeof(Piece));
+	for (uint cPawn = 0; cPawn < 8; cPawn++) {
 		returns.player[Black].pieces[cPawn].type = Pawn;
 		returns.player[Black].pieces[cPawn].x = cPawn;
 		returns.player[Black].pieces[cPawn].y = 6;
@@ -136,7 +143,7 @@ void printBoard(Board board) {
 	//top right corner of frame
 	printf("%c\n",191);
 
-	//loop through the Y axis fo the board
+	//loop through the Y axis of the board
 	for (int cY = BoardDim - 1; cY >= 0 ; cY--) {
 		//print the current y label and then the frame
 		printf(" %c%c", yLables[cY], 179);
@@ -152,7 +159,7 @@ void printBoard(Board board) {
 		}
 
 		//loop through the x axis
-		for (uint8_t cX = 0; cX < BoardDim; cX++) {
+		for (uint cX = 0; cX < BoardDim; cX++) {
 			//Alternate between it being a black/white square
 			if (abs(cX - cY) % 2 == 0) {
 				//black square
@@ -253,42 +260,45 @@ void printBoard(Board board) {
 	printf("\n");
 }
 
-uint8_t convCharToPos(char inputChar) {
+void printPlayer(Player player) {
+	for (int cP = 0; cP < player.pieceC; cP++) {
+		printf("%c, %c, %c.  ", piecesSymbol[player.pieces[cP].type], xLables[player.pieces[cP].x], yLables[player.pieces[cP].y]);
+	}
+	printf("\n");
+}
+
+uint convCharToPos(char inputChar) {
 	if (inputChar >= 'a' && inputChar <= 'h') {
-		return((uint8_t)(inputChar - 'a'));
+		return((uint)(inputChar - 'a'));
 	}
 	else {
-		return((uint8_t)(inputChar - '1'));
+		return((uint)(inputChar - '1'));
 	}
 }
 
-Piece findPiecePlayer(Player player, uint8_t xPos, uint8_t yPos) {
+Piece* findPiecePlayer(Player player, uint xPos, uint yPos) {
 	for (int cPiece = 0; cPiece < player.pieceC; cPiece++) {
 		if (player.pieces[cPiece].x == xPos && player.pieces[cPiece].y == yPos) {
-			return(player.pieces[cPiece]);
+			return(&player.pieces[cPiece]);
 		}
 	}
-	Piece failedToFind = { 0 };
-	failedToFind.type = Empty;
-	return(failedToFind);
+	return(NULL);
 }
 
-Piece findPiece(Game game, uint8_t xPos, uint8_t yPos) {
+Piece* findPiece(Game game, uint xPos, uint yPos) {
 	for (int cPiece = 0; cPiece < game.player[White].pieceC; cPiece++) {
 		if (game.player[White].pieces[cPiece].x == xPos && game.player[White].pieces[cPiece].y == yPos) {
-			return(game.player[White].pieces[cPiece]);
+			return(&game.player[White].pieces[cPiece]);
 		}
 	}
 
 	for (int cPiece = 0; cPiece < game.player[Black].pieceC; cPiece++) {
 		if (game.player[Black].pieces[cPiece].x == xPos && game.player[Black].pieces[cPiece].y == yPos) {
-			return(game.player[Black].pieces[cPiece]);
+			return(&game.player[Black].pieces[cPiece]);
 		}
 	}
 
-	Piece failed = { 0 };
-	failed.type = Empty;
-	return(failed);
+	return(NULL);
 }
 
 void removePiece(Player* player, Piece piece) {
@@ -300,11 +310,11 @@ void removePiece(Player* player, Piece piece) {
 	}
 }
 
-uint8_t movePiece(Game* game, Piece piece, uint8_t newX, uint8_t newY) {
-	if (game->board.p[piece.x][piece.y][Type] != piece.type) {
+uint movePiece(Game* game, Piece* piece, uint newX, uint newY) {
+	if (game->board.p[piece->x][piece->y][Type] != piece->type) {
 		return(ERR_NoPieceToMove);
 	}
-	uint8_t ourOwner = game->board.p[piece.x][piece.y][Owner];
+	uint ourOwner = game->board.p[piece->x][piece->y][Owner];
 	//TODO, implement a check to see if moving this piece will check ourselves.
 
 	if (game->board.p[newX][newY][Type] != Empty){
@@ -313,7 +323,7 @@ uint8_t movePiece(Game* game, Piece piece, uint8_t newX, uint8_t newY) {
 		}
 		else {
 			if (ourOwner == White) {
-				removePiece(&game->player[Black], findPiecePlayer(game->player[Black], newX, newY));
+				removePiece(&game->player[Black], *findPiecePlayer(game->player[Black], newX, newY));
 			}
 		}
 	}
@@ -323,12 +333,12 @@ uint8_t movePiece(Game* game, Piece piece, uint8_t newX, uint8_t newY) {
 }
 
 
-void movePieceForce(Board* board, Piece piece, uint8_t newX, uint8_t newY) {
-	board->p[newX][newY][Type] = piece.type;
-	board->p[newX][newY][Owner] = board->p[piece.x][piece.y][Owner];//steal the owner out of the past
-	board->p[piece.x][piece.y][Type] = Empty;
-	board->p[piece.x][piece.y][Owner] = Neither;
+void movePieceForce(Board* board, Piece* piece, uint newX, uint newY) {
+	board->p[newX][newY][Type] = piece->type;
+	board->p[newX][newY][Owner] = board->p[piece->x][piece->y][Owner];//steal the owner out of the past
+	board->p[piece->x][piece->y][Type] = Empty;
+	board->p[piece->x][piece->y][Owner] = Neither;
 
-	piece.x = newX;
-	piece.y = newY;
+	piece->x = newX;
+	piece->y = newY;
 }
