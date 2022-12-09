@@ -2,20 +2,55 @@
 #include <stdlib.h>
 #include <string.h>
 
-int16_t scorePosition(Game game, uint player) {
+int16_t scorePosition(Game* game, uint player) {
 	int16_t score = 0;
-	for (int cP = 0; cP < game.player[player].pieceC; cP++) {
-		score += pieceValOurAgr[game.player[player].pieces[cP].type];
+	for (int cP = 0; cP < game->player[player].pieceC; cP++) {
+		score += pieceValOurAgr[game->player[player].pieces[cP].type];
 	}
 
-	for (int cP = 0; cP < game.player[!player].pieceC; cP++) {
-		score -= pieceValOppAgr[game.player[!player].pieces[cP].type];
+	for (int cP = 0; cP < game->player[!player].pieceC; cP++) {
+		score -= pieceValOppAgr[game->player[!player].pieces[cP].type];
 	}
 
 	return(score);
 }
 
-//... have it be even depth
+
+const uint Score = 0;
+const uint pieceIndex = 1;
+const uint xDest = 2;
+const uint yDest = 3;
+
+//goodBad is whether we're looking for best or worst, if curPlayer == us, we score for the best move we can make (Because we don't want to make a bad move ofc)
+//if curPlayer != us, score for the 'worst move'
+int16_t scoreAndSave(int16_t* bestMoves, Game* game, uint player, int8_t PieceToMove, uint potentialXDest, uint potentialYDest, uint goodBad) {
+	//score = 0 
+	int16_t posScore = scorePosition(game, player);
+	if (goodBad) {
+		if (posScore > bestMoves[Score]) {
+			bestMoves[Score] = posScore;
+			bestMoves[pieceIndex] = PieceToMove;
+			bestMoves[xDest] = potentialXDest;
+			bestMoves[yDest] = potentialYDest;
+		}
+	}
+	else {
+		if (posScore < bestMoves[Score]) {
+			bestMoves[Score] = posScore;
+			bestMoves[pieceIndex] = PieceToMove;
+			bestMoves[xDest] = potentialXDest;
+			bestMoves[yDest] = potentialYDest;
+		}
+	}
+	
+
+	return(posScore);
+}
+
+
+
+
+//... have it be odd depth
 Move iterateLegalMoves(Game game, uint player, uint depth) {
 	if (depth > MAX_DEPTH) {
 		depth = MAX_DEPTH;
@@ -40,10 +75,7 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 	uint curDepth = 0;
 	uint curPlayer = player;
 
-	const uint score = 0;
-	const uint pieceIndex = 1;
-	const uint xDest = 2;
-	const uint yDest = 3;
+	
 	int16_t bestMoves[MAX_DEPTH][4] = { 0 };
 
 	while (1) {
@@ -111,14 +143,19 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 
 		}
 
-
+		//if no legal moves were generated, move on to the next peice
+		//go to the code that handles this
+		if (MoveCount[curDepth] == 0) {
+			goto SelectNext;
+		}
 
 		//Now that the piece is selected, moves laid out, copy the current board into the next and apply the move.
 		//games[curDepth + 1] = games[curDepth];
 		memcpy(&games[curDepth + 1], &games[curDepth], sizeof(Game));
 
+		//Dive down one, resetting all the variables for the upcoming layer as we go in. (If diving down we don't need to save what was below, as this is a new branch)
 		curDepth++;
-		//reset the upcoming variables since we're going down we don't need to save what was there before, we need it clean.
+
 		MoveIndex[curDepth] = 0;
 		for (int c = 0; c < MAX_MOVES_PER_PIECE; c++) {
 			Moves[curDepth][c][X] = 0;
@@ -126,28 +163,62 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 		}
 		MoveCount[curDepth] = 0;
 		PieceToMove[curDepth] = 0;
-			
+		bestMoves[curDepth][Score] = INT16_MIN;
+		bestMoves[curDepth][pieceIndex] = -1;
+		bestMoves[curDepth][xDest] = -1;
+		bestMoves[curDepth][yDest] = -1;
 
+		//Update the new board with the given move
 		movePieceForce(&games[curDepth].board,//board
 			&games[curDepth].player[curPlayer].pieces[PieceToMove[curDepth - 1]],//piece information from this simulated game
 			Moves[curDepth - 1][MoveIndex[curDepth - 1]][X],//x dest
 			Moves[curDepth - 1][MoveIndex[curDepth - 1]][Y]//y dest
 		);
+		printf("\n\nDepth: %d\n", curDepth);
 		printBoard(games[curDepth].board);
+		
+		
+
 		//Now, if we're at max depth
 		if (curDepth == depth) {
-			//score the position, compare it, then back up one
-			scorePosition(games[curDepth], player);
+			//Back up one, score what the position was, 'score and save' only saves if the score is better/worse
 			curDepth--;
-			MoveIndex[curDepth]++;
-			if (MoveIndex[curDepth] >= MoveCount[curDepth]) {
-				MoveIndex[curDepth] = 0;
-				MoveCount[curDepth] = 0;
-				PieceToMove[curDepth]++;
-				if (PieceToMove[curDepth] >= games[curDepth].player[!curPlayer].pieceC) {
-					//todo?
+			scoreAndSave(&bestMoves[curDepth], &games[curDepth + 1], player, PieceToMove[curDepth], Moves[curDepth][MoveIndex[curDepth]][X], Moves[curDepth][MoveIndex[curDepth]][Y], curPlayer == player);
+		
+			
+
+			//Advance the move on the current piece,
+			//If no more moves are left on this piece, go to the next piece. 
+			//If there are no more pieces, back up, then try again.
+			//If there is no more room to back up, we are done.
+		SelectNext:;
+			while (1) {
+				//go to the next move on the piece
+				MoveIndex[curDepth]++;
+
+				//If no more moves left on piece
+				if (MoveIndex[curDepth] >= MoveCount[curDepth]) {
+					//reset moves and go to the next piece to generate their moves on the next main while loop iteration
+					MoveIndex[curDepth] = 0;
+					MoveCount[curDepth] = 0;
+					PieceToMove[curDepth]++;
+					//if there are no more pieces left at this depth, back up one more.
+					if (PieceToMove[curDepth] >= games[curDepth].player[!curPlayer].pieceC) {
+						if (curDepth - 1 == -1) {//if we're out of depth, be done, as the only way to hit 'out of depth' at this point is to have no more pieces left to check
+							goto Done;
+						}
+						else {
+							curDepth--;
+							curPlayer = !curPlayer;
+						}
+					}else {//Otherwise, we're done here because we found a new piece to roll with
+						break;
+					}
+				}else {//Otherwise, we're done here because we found a move on our current piece to roll with
+					break;
 				}
 			}
+			
 		}
 		else {
 			//otherwise, we're going down and need to swapsies
@@ -155,7 +226,13 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 		}
 		
 	}
+
+
+Done:;
+
 }
+
+
 
 Game gameCopy(Game* game) {
 	Game temp = *game;

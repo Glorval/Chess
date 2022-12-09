@@ -20,9 +20,10 @@ int main(void) {
 	//printf("\33[0m");
 	//printf("\33[47;100m testing");
 	//printf("\33[0m\n\n");
+	iterateLegalMoves(game, White, 3);
 	printBoard(game.board);
 
-	iterateLegalMoves(game, White, 2);
+	
 	int player = White;
 	while (1) {
 		printf("It is %d turn.\n", player);

@@ -14,7 +14,7 @@ struct move {
 };
 typedef struct move Move;
 
-int16_t scorePosition(Game game, uint player);
+int16_t scorePosition(Game* game, uint player);
 
 Move iterateLegalMoves(Game game, uint player, uint depth);
 Move runLegalMoves(Game* game, uint player, uint depth);
