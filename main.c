@@ -24,7 +24,7 @@ int main(void) {
 	double cpu_time_used;
 
 	start = clock();
-	precacheLegalMoves();
+	precacheKnightMoves();
 	end = clock();
 	cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
 	printf("Precache time: %f\n", cpu_time_used);
@@ -37,7 +37,8 @@ int main(void) {
 	printf("Board Prediction time: %f\n", cpu_time_used);
 	printBoard(game.board);
 
-	
+
+
 	/*int player = White;
 	while (1) {
 		printf("It is %d turn.\n", player);

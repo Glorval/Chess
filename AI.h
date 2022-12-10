@@ -1,5 +1,5 @@
 #include "chessBase.h"
-#define MAX_DEPTH 30
+#define MAX_DEPTH 32
 #define MAX_MOVES_PER_PIECE 27
 
 #define gotoxy(x, y) printf("\033[%d;%dH", (y), (x))
@@ -26,10 +26,10 @@ struct legalMoves {
 };
 typedef struct legalMoves LegalMoves;
 //first two piece slots in this aren't used, and doesn't have the pawn either due to its weirder rules
-static LegalMoves AllLegalMoves[6][BoardDim][BoardDim] = { 0 };
+static LegalMoves AllLegalMoves[BoardDim][BoardDim] = { 0 };
 
 //fills 'all legal moves' for the queen, rook, bishop, and knight.
-void precacheLegalMoves();
+void precacheKnightMoves();
 
 
 int16_t scorePosition(Game* game, uint player);

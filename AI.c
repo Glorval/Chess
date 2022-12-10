@@ -108,17 +108,17 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 			givenPiece = games[curDepth].player[curPlayer].pieces[PieceToMove[curDepth]];
 			
 			//run through all the types, each one has internal code to handle move gen
-			if (givenPiece.type != Pawn && givenPiece.type != King) {
+			if (givenPiece.type == Knight) {
 				
 				//Optimization, instead of copying over, have checks on the stuff later to see if we're moving a pawn
 				//and rely more on the current index we store than this.
-				MoveCount[curDepth] = AllLegalMoves[givenPiece.type][givenPiece.x][givenPiece.y].moveC;
+				MoveCount[curDepth] = AllLegalMoves[givenPiece.x][givenPiece.y].moveC;
 				uint cLegalMove = 0;
 				uint toX = 0;
 				uint toY = 0;
-				for (int cM = 0; cM < AllLegalMoves[givenPiece.type][givenPiece.x][givenPiece.y].moveC;cM++) {
-					toX = AllLegalMoves[givenPiece.type][givenPiece.x][givenPiece.y].toX[cM];
-					toY = AllLegalMoves[givenPiece.type][givenPiece.x][givenPiece.y].toY[cM];
+				for (int cM = 0; cM < AllLegalMoves[givenPiece.x][givenPiece.y].moveC;cM++) {
+					toX = AllLegalMoves[givenPiece.x][givenPiece.y].toX[cM];
+					toY = AllLegalMoves[givenPiece.x][givenPiece.y].toY[cM];
 					Moves[curDepth][cLegalMove][X] = toX;
 					Moves[curDepth][cLegalMove][Y] = toY;
 					MoveCount[curDepth] -= games[curDepth].board.p[toX][toY][Owner] == curPlayer;
@@ -169,8 +169,8 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 				}
 
 			}
-			/*
-			if (givenPiece.type == Knight) {
+			
+			/*else if (givenPiece.type == Knight) {
 				int8_t targetX;
 				int8_t targetY;
 
@@ -318,7 +318,7 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 #endif
 			//Back up one, score what the position was, 'score and save' only saves if the score is better/worse
 			curDepth--;
-			scoreAndSave(&bestMoves[curDepth], &games[curDepth + 1], player, PieceToMove[curDepth], Moves[curDepth][MoveIndex[curDepth]][X], Moves[curDepth][MoveIndex[curDepth]][Y], curPlayer == player);
+			//scoreAndSave(&bestMoves[curDepth], &games[curDepth + 1], player, PieceToMove[curDepth], Moves[curDepth][MoveIndex[curDepth]][X], Moves[curDepth][MoveIndex[curDepth]][Y], curPlayer == player);
 		
 			
 
@@ -366,7 +366,7 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 Done:;
 #ifdef PRINT_NODES
 	end = clock();
-	double cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
+	double cpu_time_used = ((double)((unsigned long long)end - (unsigned long long)start)) / CLOCKS_PER_SEC;
 	double temp = nodes;
 	int nps = (int)round(temp / cpu_time_used);
 	printf("Nodes: %d\nThat is %d nodes per second.\n", (int)nodes, (int)nps);
@@ -394,7 +394,7 @@ Game gameCopy(Game* game) {
 
 //I know that the loops should be merged together for speed, but this is a oneoff and doesn't
 //take much time anyhow, so writing it for human understanding is better...
-void precacheLegalMoves() {
+void precacheKnightMoves() {
 	int8_t toX = 0;
 	int8_t toY = 0;
 	//knight
@@ -404,72 +404,72 @@ void precacheLegalMoves() {
 			toX = cX + 1;
 			toY = cY + 2;
 			if (toX < 8 && toY < 8) {
-				AllLegalMoves[Knight][cX][cY].toX[AllLegalMoves[Knight][cX][cY].moveC] = toX;
-				AllLegalMoves[Knight][cX][cY].toY[AllLegalMoves[Knight][cX][cY].moveC] = toY;
-				AllLegalMoves[Knight][cX][cY].moveC++;
+				AllLegalMoves[cX][cY].toX[AllLegalMoves[cX][cY].moveC] = toX;
+				AllLegalMoves[cX][cY].toY[AllLegalMoves[cX][cY].moveC] = toY;
+				AllLegalMoves[cX][cY].moveC++;
 			}
 
 			//right up
 			toX = cX + 2;
 			toY = cY + 1;
 			if (toX < 8 && toY < 8) {
-				AllLegalMoves[Knight][cX][cY].toX[AllLegalMoves[Knight][cX][cY].moveC] = toX;
-				AllLegalMoves[Knight][cX][cY].toY[AllLegalMoves[Knight][cX][cY].moveC] = toY;
-				AllLegalMoves[Knight][cX][cY].moveC++;
+				AllLegalMoves[cX][cY].toX[AllLegalMoves[cX][cY].moveC] = toX;
+				AllLegalMoves[cX][cY].toY[AllLegalMoves[cX][cY].moveC] = toY;
+				AllLegalMoves[cX][cY].moveC++;
 			}
 
 			//right down
 			toX = cX + 2;
 			toY = cY - 1;
 			if (toX < 8 && toY >= 0) {
-				AllLegalMoves[Knight][cX][cY].toX[AllLegalMoves[Knight][cX][cY].moveC] = toX;
-				AllLegalMoves[Knight][cX][cY].toY[AllLegalMoves[Knight][cX][cY].moveC] = toY;
-				AllLegalMoves[Knight][cX][cY].moveC++;
+				AllLegalMoves[cX][cY].toX[AllLegalMoves[cX][cY].moveC] = toX;
+				AllLegalMoves[cX][cY].toY[AllLegalMoves[cX][cY].moveC] = toY;
+				AllLegalMoves[cX][cY].moveC++;
 			}
 
 			//down right
 			toX = cX + 1;
 			toY = cY - 2;
 			if (toX < 8 && toY >= 0) {
-				AllLegalMoves[Knight][cX][cY].toX[AllLegalMoves[Knight][cX][cY].moveC] = toX;
-				AllLegalMoves[Knight][cX][cY].toY[AllLegalMoves[Knight][cX][cY].moveC] = toY;
-				AllLegalMoves[Knight][cX][cY].moveC++;
+				AllLegalMoves[cX][cY].toX[AllLegalMoves[cX][cY].moveC] = toX;
+				AllLegalMoves[cX][cY].toY[AllLegalMoves[cX][cY].moveC] = toY;
+				AllLegalMoves[cX][cY].moveC++;
 			}
 
 			//down left
 			toX = cX - 1;
 			toY = cY - 2;
 			if (toX >= 0 && toY >= 0) {
-				AllLegalMoves[Knight][cX][cY].toX[AllLegalMoves[Knight][cX][cY].moveC] = toX;
-				AllLegalMoves[Knight][cX][cY].toY[AllLegalMoves[Knight][cX][cY].moveC] = toY;
-				AllLegalMoves[Knight][cX][cY].moveC++;
+				AllLegalMoves[cX][cY].toX[AllLegalMoves[cX][cY].moveC] = toX;
+				AllLegalMoves[cX][cY].toY[AllLegalMoves[cX][cY].moveC] = toY;
+				AllLegalMoves[cX][cY].moveC++;
 			}
 
 			//left down
 			toX = cX - 2;
 			toY = cY - 1;
 			if (toX >= 0 && toY >= 0) {
-				AllLegalMoves[Knight][cX][cY].toX[AllLegalMoves[Knight][cX][cY].moveC] = toX;
-				AllLegalMoves[Knight][cX][cY].toY[AllLegalMoves[Knight][cX][cY].moveC] = toY;
-				AllLegalMoves[Knight][cX][cY].moveC++;
+				AllLegalMoves[cX][cY].toX[AllLegalMoves[cX][cY].moveC] = toX;
+				AllLegalMoves[cX][cY].toY[AllLegalMoves[cX][cY].moveC] = toY;
+				AllLegalMoves[cX][cY].moveC++;
 			}
 
 			//left up
 			toX = cX - 2;
 			toY = cY + 1;
 			if (toX >= 0 && toY < 8) {
-				AllLegalMoves[Knight][cX][cY].toX[AllLegalMoves[Knight][cX][cY].moveC] = toX;
-				AllLegalMoves[Knight][cX][cY].toY[AllLegalMoves[Knight][cX][cY].moveC] = toY;
-				AllLegalMoves[Knight][cX][cY].moveC++;
+				AllLegalMoves[cX][cY].toX[AllLegalMoves[cX][cY].moveC] = toX;
+				AllLegalMoves[cX][cY].toY[AllLegalMoves[cX][cY].moveC] = toY;
+				AllLegalMoves[cX][cY].moveC++;
 			}
 
 			//up left
 			toX = cX - 1;
 			toY = cY + 2;
 			if (toX >= 0 && toY < 8) {
-				AllLegalMoves[Knight][cX][cY].toX[AllLegalMoves[Knight][cX][cY].moveC] = toX;
-				AllLegalMoves[Knight][cX][cY].toY[AllLegalMoves[Knight][cX][cY].moveC] = toY;
-				AllLegalMoves[Knight][cX][cY].moveC++;
+				AllLegalMoves[cX][cY].toX[AllLegalMoves[cX][cY].moveC] = toX;
+				AllLegalMoves[cX][cY].toY[AllLegalMoves[cX][cY].moveC] = toY;
+				AllLegalMoves[cX][cY].moveC++;
 			}
 		}
 	}
@@ -477,9 +477,9 @@ void precacheLegalMoves() {
 
 	/*for (int cX = 0; cX < 8; cX++) {
 		for (int cY = 0; cY < 8; cY++) {
-			printf("X: %d, Y: %d. Moves: %u\n\n", cX, cY, AllLegalMoves[Knight][cX][cY].moveC);
-			for (int cM = 0; cM < AllLegalMoves[Knight][cX][cY].moveC; cM++) {
-				printf("To %u,%u\n", AllLegalMoves[Knight][cX][cY].toX[cM], AllLegalMoves[Knight][cX][cY].toY[cM]);
+			printf("X: %d, Y: %d. Moves: %u\n\n", cX, cY, AllLegalMoves[cX][cY].moveC);
+			for (int cM = 0; cM < AllLegalMoves[cX][cY].moveC; cM++) {
+				printf("To %u,%u\n", AllLegalMoves[cX][cY].toX[cM], AllLegalMoves[cX][cY].toY[cM]);
 			}
 			printf("\n");
 		}
