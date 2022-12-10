@@ -2,6 +2,11 @@
 #define MAX_DEPTH 30
 #define MAX_MOVES_PER_PIECE 27
 
+#define gotoxy(x, y) printf("\033[%d;%dH", (y), (x))
+
+#define PRINT_NODES
+//#define PRINT_BOARDS_SOLVING
+
 //enum pieces {Empty, King, Queen, Rook, Bishop, Knight, Pawn};
 const static int8_t pieceValOurAgr[] = { 0, 50, 12, 5, 3,3,1 };
 
@@ -13,6 +18,19 @@ struct move {
 	int8_t score;
 };
 typedef struct move Move;
+
+struct legalMoves {
+	uint8_t moveC;
+	uint8_t toX[MAX_MOVES_PER_PIECE];
+	uint8_t toY[MAX_MOVES_PER_PIECE];
+};
+typedef struct legalMoves LegalMoves;
+//first two piece slots in this aren't used, and doesn't have the pawn either due to its weirder rules
+static LegalMoves AllLegalMoves[6][BoardDim][BoardDim] = { 0 };
+
+//fills 'all legal moves' for the queen, rook, bishop, and knight.
+void precacheLegalMoves();
+
 
 int16_t scorePosition(Game* game, uint player);
 

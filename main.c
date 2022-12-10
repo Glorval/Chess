@@ -1,10 +1,15 @@
-﻿#include <stdio.h>
-#include <stdint.h>
+﻿//#define DEBUG
+//#define COMPAT_MODE
+
+
+
 #include "chessBase.h"
 #include"AI.h"
 
-//#define DEBUG
-//#define COMPAT_MODE
+#include <stdio.h>
+#include <stdint.h>
+#include <time.h>
+
 
 void flushInput(void) {
 	char c = 0;
@@ -14,17 +19,26 @@ void flushInput(void) {
 int main(void) {
 	Game game = startGame();
 
-	printf("%d\n", sizeof(Game));
+
+	clock_t start, end;
+	double cpu_time_used;
+
+	start = clock();
+	precacheLegalMoves();
+	end = clock();
+	cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
+	printf("Precache time: %f\n", cpu_time_used);
+
+	start = clock();
+	iterateLegalMoves(game, White, 6);
 	
-	//printf("\33[254;244;005m Select RGB foreground color testing\n");
-	//printf("\33[0m");
-	//printf("\33[47;100m testing");
-	//printf("\33[0m\n\n");
-	iterateLegalMoves(game, White, 3);
+	end = clock();
+	cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
+	printf("Board Prediction time: %f\n", cpu_time_used);
 	printBoard(game.board);
 
 	
-	int player = White;
+	/*int player = White;
 	while (1) {
 		printf("It is %d turn.\n", player);
 		printf("Enter piece to move: ");
@@ -51,7 +65,7 @@ int main(void) {
 		else {
 			player = White;
 		}
-	}
+	}*/
 	
 	//while (1) {
 	//	printf("White's turn");

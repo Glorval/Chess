@@ -1,7 +1,11 @@
 #include "AI.h"
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
+#include <math.h>
+#include <stdio.h>
 
+//slow
 int16_t scorePosition(Game* game, uint player) {
 	int16_t score = 0;
 	for (int cP = 0; cP < game->player[player].pieceC; cP++) {
@@ -23,6 +27,7 @@ const uint yDest = 3;
 
 //goodBad is whether we're looking for best or worst, if curPlayer == us, we score for the best move we can make (Because we don't want to make a bad move ofc)
 //if curPlayer != us, score for the 'worst move'
+//SLOW
 int16_t scoreAndSave(int16_t* bestMoves, Game* game, uint player, int8_t PieceToMove, uint potentialXDest, uint potentialYDest, uint goodBad) {
 	//score = 0 
 	int16_t posScore = scorePosition(game, player);
@@ -55,6 +60,11 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 	if (depth > MAX_DEPTH) {
 		depth = MAX_DEPTH;
 	}
+
+	clock_t start, end;
+	start = clock();
+	uint64_t nodes = 0;
+
 
 	//On the following, player is not needed to be stored as depth of 10 is assumed 5 moves each, thus it alternates player naturally in the memory
 
@@ -96,9 +106,28 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 		if (MoveIndex[curDepth] == 0) {
 			//find what piece index we're using
 			givenPiece = games[curDepth].player[curPlayer].pieces[PieceToMove[curDepth]];
-
+			
 			//run through all the types, each one has internal code to handle move gen
-			if (givenPiece.type == Pawn) {
+			if (givenPiece.type != Pawn && givenPiece.type != King) {
+				
+				//Optimization, instead of copying over, have checks on the stuff later to see if we're moving a pawn
+				//and rely more on the current index we store than this.
+				MoveCount[curDepth] = AllLegalMoves[givenPiece.type][givenPiece.x][givenPiece.y].moveC;
+				uint cLegalMove = 0;
+				uint toX = 0;
+				uint toY = 0;
+				for (int cM = 0; cM < AllLegalMoves[givenPiece.type][givenPiece.x][givenPiece.y].moveC;cM++) {
+					toX = AllLegalMoves[givenPiece.type][givenPiece.x][givenPiece.y].toX[cM];
+					toY = AllLegalMoves[givenPiece.type][givenPiece.x][givenPiece.y].toY[cM];
+					Moves[curDepth][cLegalMove][X] = toX;
+					Moves[curDepth][cLegalMove][Y] = toY;
+					MoveCount[curDepth] -= games[curDepth].board.p[toX][toY][Owner] == curPlayer;
+					//cM += games[curDepth].board.p[toX][toY][Owner] != curPlayer;
+					cLegalMove += games[curDepth].board.p[toX][toY][Owner] != curPlayer;
+				}
+
+			}
+			else if (givenPiece.type == Pawn) {
 				//legal pawn moves are forward 2 if on base, forward 1 otherwise, capture forward diagonally 
 
 				//one ahead
@@ -140,6 +169,102 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 				}
 
 			}
+			/*
+			if (givenPiece.type == Knight) {
+				int8_t targetX;
+				int8_t targetY;
+
+				//up right
+				targetX = givenPiece.x + 1;
+				targetY = givenPiece.y + 2;
+				if (targetX < BoardDim && targetY < BoardDim) {
+					if (games[curDepth].board.p[targetX][targetY][Type] == Empty || games[curDepth].board.p[targetX][targetY][Owner] != curPlayer) {
+						Moves[curDepth][MoveCount[curDepth]][0] = targetX;
+						Moves[curDepth][MoveCount[curDepth]][1] = targetY;
+						MoveCount[curDepth]++;
+					}
+				}
+				
+
+				//right up
+				targetX++;
+				targetY--;
+				if (targetX < BoardDim && targetY < BoardDim) {
+					if (games[curDepth].board.p[targetX][targetY][Type] == Empty || games[curDepth].board.p[targetX][targetY][Owner] != curPlayer) {
+						Moves[curDepth][MoveCount[curDepth]][0] = targetX;
+						Moves[curDepth][MoveCount[curDepth]][1] = targetY;
+						MoveCount[curDepth]++;
+					}
+				}
+
+				//right down
+				//targetX++;
+				targetY -= 2;
+				if (targetX < BoardDim && targetY >= 0) {
+					if (games[curDepth].board.p[targetX][targetY][Type] == Empty || games[curDepth].board.p[targetX][targetY][Owner] != curPlayer) {
+						Moves[curDepth][MoveCount[curDepth]][0] = targetX;
+						Moves[curDepth][MoveCount[curDepth]][1] = targetY;
+						MoveCount[curDepth]++;
+					}
+				}
+
+				//down right
+				targetX--;
+				targetY--;
+				if (targetX < BoardDim && targetY >= 0) {
+					if (games[curDepth].board.p[targetX][targetY][Type] == Empty || games[curDepth].board.p[targetX][targetY][Owner] != curPlayer) {
+						Moves[curDepth][MoveCount[curDepth]][0] = targetX;
+						Moves[curDepth][MoveCount[curDepth]][1] = targetY;
+						MoveCount[curDepth]++;
+					}
+				}
+
+				//down left
+				targetX-=2;
+				//targetY--;
+				if (targetX >= 0 && targetY >= 0) {
+					if (games[curDepth].board.p[targetX][targetY][Type] == Empty || games[curDepth].board.p[targetX][targetY][Owner] != curPlayer) {
+						Moves[curDepth][MoveCount[curDepth]][0] = targetX;
+						Moves[curDepth][MoveCount[curDepth]][1] = targetY;
+						MoveCount[curDepth]++;
+					}
+				}
+
+				//left down
+				targetX--;
+				targetY++;
+				if (targetX >= 0 && targetY >= 0) {
+					if (games[curDepth].board.p[targetX][targetY][Type] == Empty || games[curDepth].board.p[targetX][targetY][Owner] != curPlayer) {
+						Moves[curDepth][MoveCount[curDepth]][0] = targetX;
+						Moves[curDepth][MoveCount[curDepth]][1] = targetY;
+						MoveCount[curDepth]++;
+					}
+				}
+
+				//left up
+				//targetX--;
+				targetY+=2;
+				if (targetX >= 0 && targetY < BoardDim) {
+					if (games[curDepth].board.p[targetX][targetY][Type] == Empty || games[curDepth].board.p[targetX][targetY][Owner] != curPlayer) {
+						Moves[curDepth][MoveCount[curDepth]][0] = targetX;
+						Moves[curDepth][MoveCount[curDepth]][1] = targetY;
+						MoveCount[curDepth]++;
+					}
+				}
+
+				//up left
+				targetX++;
+				targetY++;
+				if (targetX >= 0 && targetY < BoardDim) {
+					if (games[curDepth].board.p[targetX][targetY][Type] == Empty || games[curDepth].board.p[targetX][targetY][Owner] != curPlayer) {
+						Moves[curDepth][MoveCount[curDepth]][0] = targetX;
+						Moves[curDepth][MoveCount[curDepth]][1] = targetY;
+						MoveCount[curDepth]++;
+					}
+				}
+			}*/
+			
+
 
 		}
 
@@ -174,13 +299,23 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 			Moves[curDepth - 1][MoveIndex[curDepth - 1]][X],//x dest
 			Moves[curDepth - 1][MoveIndex[curDepth - 1]][Y]//y dest
 		);
+
+#ifdef PRINT_BOARDS_SOLVING
 		printf("\n\nDepth: %d\n", curDepth);
 		printBoard(games[curDepth].board);
-		
+#endif
+
+
 		
 
 		//Now, if we're at max depth
 		if (curDepth == depth) {
+#ifdef PRINT_NODES
+			
+			nodes++;
+			//gotoxy(0, 0);
+			//printf("Current Node: %d", nodes);
+#endif
 			//Back up one, score what the position was, 'score and save' only saves if the score is better/worse
 			curDepth--;
 			scoreAndSave(&bestMoves[curDepth], &games[curDepth + 1], player, PieceToMove[curDepth], Moves[curDepth][MoveIndex[curDepth]][X], Moves[curDepth][MoveIndex[curDepth]][Y], curPlayer == player);
@@ -229,7 +364,14 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 
 
 Done:;
-
+#ifdef PRINT_NODES
+	end = clock();
+	double cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
+	double temp = nodes;
+	int nps = (int)round(temp / cpu_time_used);
+	printf("Nodes: %d\nThat is %d nodes per second.\n", (int)nodes, (int)nps);
+#endif
+	
 }
 
 
@@ -249,6 +391,102 @@ Game gameCopy(Game* game) {
 	return(temp);
 }
 
+
+//I know that the loops should be merged together for speed, but this is a oneoff and doesn't
+//take much time anyhow, so writing it for human understanding is better...
+void precacheLegalMoves() {
+	int8_t toX = 0;
+	int8_t toY = 0;
+	//knight
+	for (int cX = 0; cX < 8; cX++) {
+		for (int cY = 0; cY < 8; cY++) {
+			//up right
+			toX = cX + 1;
+			toY = cY + 2;
+			if (toX < 8 && toY < 8) {
+				AllLegalMoves[Knight][cX][cY].toX[AllLegalMoves[Knight][cX][cY].moveC] = toX;
+				AllLegalMoves[Knight][cX][cY].toY[AllLegalMoves[Knight][cX][cY].moveC] = toY;
+				AllLegalMoves[Knight][cX][cY].moveC++;
+			}
+
+			//right up
+			toX = cX + 2;
+			toY = cY + 1;
+			if (toX < 8 && toY < 8) {
+				AllLegalMoves[Knight][cX][cY].toX[AllLegalMoves[Knight][cX][cY].moveC] = toX;
+				AllLegalMoves[Knight][cX][cY].toY[AllLegalMoves[Knight][cX][cY].moveC] = toY;
+				AllLegalMoves[Knight][cX][cY].moveC++;
+			}
+
+			//right down
+			toX = cX + 2;
+			toY = cY - 1;
+			if (toX < 8 && toY >= 0) {
+				AllLegalMoves[Knight][cX][cY].toX[AllLegalMoves[Knight][cX][cY].moveC] = toX;
+				AllLegalMoves[Knight][cX][cY].toY[AllLegalMoves[Knight][cX][cY].moveC] = toY;
+				AllLegalMoves[Knight][cX][cY].moveC++;
+			}
+
+			//down right
+			toX = cX + 1;
+			toY = cY - 2;
+			if (toX < 8 && toY >= 0) {
+				AllLegalMoves[Knight][cX][cY].toX[AllLegalMoves[Knight][cX][cY].moveC] = toX;
+				AllLegalMoves[Knight][cX][cY].toY[AllLegalMoves[Knight][cX][cY].moveC] = toY;
+				AllLegalMoves[Knight][cX][cY].moveC++;
+			}
+
+			//down left
+			toX = cX - 1;
+			toY = cY - 2;
+			if (toX >= 0 && toY >= 0) {
+				AllLegalMoves[Knight][cX][cY].toX[AllLegalMoves[Knight][cX][cY].moveC] = toX;
+				AllLegalMoves[Knight][cX][cY].toY[AllLegalMoves[Knight][cX][cY].moveC] = toY;
+				AllLegalMoves[Knight][cX][cY].moveC++;
+			}
+
+			//left down
+			toX = cX - 2;
+			toY = cY - 1;
+			if (toX >= 0 && toY >= 0) {
+				AllLegalMoves[Knight][cX][cY].toX[AllLegalMoves[Knight][cX][cY].moveC] = toX;
+				AllLegalMoves[Knight][cX][cY].toY[AllLegalMoves[Knight][cX][cY].moveC] = toY;
+				AllLegalMoves[Knight][cX][cY].moveC++;
+			}
+
+			//left up
+			toX = cX - 2;
+			toY = cY + 1;
+			if (toX >= 0 && toY < 8) {
+				AllLegalMoves[Knight][cX][cY].toX[AllLegalMoves[Knight][cX][cY].moveC] = toX;
+				AllLegalMoves[Knight][cX][cY].toY[AllLegalMoves[Knight][cX][cY].moveC] = toY;
+				AllLegalMoves[Knight][cX][cY].moveC++;
+			}
+
+			//up left
+			toX = cX - 1;
+			toY = cY + 2;
+			if (toX >= 0 && toY < 8) {
+				AllLegalMoves[Knight][cX][cY].toX[AllLegalMoves[Knight][cX][cY].moveC] = toX;
+				AllLegalMoves[Knight][cX][cY].toY[AllLegalMoves[Knight][cX][cY].moveC] = toY;
+				AllLegalMoves[Knight][cX][cY].moveC++;
+			}
+		}
+	}
+
+
+	/*for (int cX = 0; cX < 8; cX++) {
+		for (int cY = 0; cY < 8; cY++) {
+			printf("X: %d, Y: %d. Moves: %u\n\n", cX, cY, AllLegalMoves[Knight][cX][cY].moveC);
+			for (int cM = 0; cM < AllLegalMoves[Knight][cX][cY].moveC; cM++) {
+				printf("To %u,%u\n", AllLegalMoves[Knight][cX][cY].toX[cM], AllLegalMoves[Knight][cX][cY].toY[cM]);
+			}
+			printf("\n");
+		}
+	}*/
+}
+
+/*
 Move runLegalMoves(Game* game, uint player, uint depth) {
 
 	int8_t forward = 0;
@@ -280,4 +518,4 @@ Move runLegalMoves(Game* game, uint player, uint depth) {
 
 int8_t recurseLegalMoves(Game* game, uint player, uint depth) {
 
-}
+}*/
