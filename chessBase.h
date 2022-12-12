@@ -66,10 +66,12 @@ typedef uint32_t PieceComp;
 #define compPieces(a, b) ((a).type == (b).type && (a).x == (b).x && (a).y == (b).y)
 #define Square(x) ((x)*(x))
 
+//always put the king in position zero
 struct player {
 	Piece pieces[16];
 	uint pieceC;
 };
+//Always put the king in position zero
 typedef struct player Player;
 
 struct game {
@@ -90,7 +92,7 @@ uint convCharToPos(char inputChar);
 
 //mainly used for player inputs, the AI approaches things from a piece's perspective to being with and thus the piece data doesn't need to be sought out.
 Piece* findPiecePlayer(Player player, uint xPos, uint yPos);
-Piece* findPiece(Game game, uint xPos, uint yPos);
+Piece* findPiece(Game* game, uint xPos, uint yPos);
 
 //returns if successful or not.
 uint movePiece(Game* game, Piece* piece, uint newX, uint newY);

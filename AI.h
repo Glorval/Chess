@@ -5,7 +5,7 @@
 #define gotoxy(x, y) printf("\033[%d;%dH", (y), (x))
 
 #define PRINT_NODES
-//#define PRINT_BOARDS_SOLVING
+#define PRINT_BOARDS_SOLVING
 
 //enum pieces {Empty, King, Queen, Rook, Bishop, Knight, Pawn};
 const static int8_t pieceValOurAgr[] = { 0, 50, 12, 5, 3,3,1 };

@@ -14,41 +14,41 @@ Game startGame(void) {
 		}
 	}
 
-	//white setup
+	//white setup, no Y value needed on the pieces as it's initialized to zero
 	returns.player[White].pieceC = 16;
+	returns.player[White].pieces[0].type = King;
+	returns.player[White].pieces[0].x = 4;
+	returns.player[White].pieces[0].y = 4;
+	returns.board.p[4][4][Type] = King;
+	returns.board.p[4][4][Owner] = White;
 	//returns.player[White].pieces = calloc(16, sizeof(Piece));
-	for (uint cPawn = 0; cPawn < 8; cPawn++) {
+	for (uint cPawn = 1; cPawn < 9; cPawn++) {
 		returns.player[White].pieces[cPawn].type = Pawn;
 		returns.player[White].pieces[cPawn].x = cPawn;
 		returns.player[White].pieces[cPawn].y = 1;
 
-		returns.board.p[cPawn][1][Type] = Pawn;
-		returns.board.p[cPawn][1][Owner] = White;
+		returns.board.p[cPawn-1][1][Type] = Pawn;
+		returns.board.p[cPawn - 1][1][Owner] = White;
 	}
-	returns.player[White].pieces[8].type = Rook;
-	returns.player[White].pieces[8].x = 0;
+	returns.player[White].pieces[9].type = Rook;
+	returns.player[White].pieces[9].x = 0;
 	returns.board.p[0][0][Type] = Rook;
 	returns.board.p[0][0][Owner] = White;
 
-	returns.player[White].pieces[9].type = Knight;
-	returns.player[White].pieces[9].x = 1;
+	returns.player[White].pieces[10].type = Knight;
+	returns.player[White].pieces[10].x = 1;
 	returns.board.p[1][0][Type] = Knight;
 	returns.board.p[1][0][Owner] = White;
 
-	returns.player[White].pieces[10].type = Bishop;
-	returns.player[White].pieces[10].x = 2;
+	returns.player[White].pieces[11].type = Bishop;
+	returns.player[White].pieces[11].x = 2;
 	returns.board.p[2][0][Type] = Bishop;
 	returns.board.p[2][0][Owner] = White;
 
-	returns.player[White].pieces[11].type = Queen;
-	returns.player[White].pieces[11].x = 3;
+	returns.player[White].pieces[12].type = Queen;
+	returns.player[White].pieces[12].x = 3;
 	returns.board.p[3][0][Type] = Queen;
 	returns.board.p[3][0][Owner] = White;
-
-	returns.player[White].pieces[12].type = King;
-	returns.player[White].pieces[12].x = 4;
-	returns.board.p[4][0][Type] = King;
-	returns.board.p[4][0][Owner] = White;
 
 	returns.player[White].pieces[13].type = Bishop;
 	returns.player[White].pieces[13].x = 5;
@@ -69,44 +69,43 @@ Game startGame(void) {
 
 	//black setup
 	returns.player[Black].pieceC = 16;
+	returns.player[Black].pieces[0].type = King;
+	returns.player[Black].pieces[0].x = 4;
+	returns.player[Black].pieces[0].y = 7;
+	returns.board.p[4][7][Type] = King;
+	returns.board.p[4][7][Owner] = Black;
 	//returns.player[Black].pieces = calloc(16, sizeof(Piece));
-	for (uint cPawn = 0; cPawn < 8; cPawn++) {
+	for (uint cPawn = 1; cPawn < 9; cPawn++) {
 		returns.player[Black].pieces[cPawn].type = Pawn;
 		returns.player[Black].pieces[cPawn].x = cPawn;
 		returns.player[Black].pieces[cPawn].y = 6;
 
-		returns.board.p[cPawn][6][Type] = Pawn;
-		returns.board.p[cPawn][6][Owner] = Black;
+		returns.board.p[cPawn - 1][6][Type] = Pawn;
+		returns.board.p[cPawn - 1][6][Owner] = Black;
 	}
-	returns.player[Black].pieces[8].type = Rook;
-	returns.player[Black].pieces[8].x = 0;
-	returns.player[Black].pieces[8].y = 7;
-	returns.board.p[0][7][Type] = Rook;
-	returns.board.p[0][7][Owner] = Black;
+	returns.player[Black].pieces[9].type = Rook;
+	returns.player[Black].pieces[9].x = 3;
+	returns.player[Black].pieces[9].y = 5;
+	returns.board.p[3][5][Type] = Rook;//0,7
+	returns.board.p[3][5][Owner] = Black;
 
-	returns.player[Black].pieces[9].type = Knight;
-	returns.player[Black].pieces[9].x = 1;
-	returns.player[Black].pieces[9].y = 7;
+	returns.player[Black].pieces[10].type = Knight;
+	returns.player[Black].pieces[10].x = 1;
+	returns.player[Black].pieces[10].y = 7;
 	returns.board.p[1][7][Type] = Knight;
 	returns.board.p[1][7][Owner] = Black;
 
-	returns.player[Black].pieces[10].type = Bishop;
-	returns.player[Black].pieces[10].x = 2;
-	returns.player[Black].pieces[10].y = 7;
-	returns.board.p[2][7][Type] = Bishop;
+	returns.player[Black].pieces[11].type = Bishop;
+	returns.player[Black].pieces[11].x = 2;
+	returns.player[Black].pieces[11].y = 7;
+	returns.board.p[2][7][Type] = Bishop;//2,7
 	returns.board.p[2][7][Owner] = Black;
 
-	returns.player[Black].pieces[11].type = Queen;
-	returns.player[Black].pieces[11].x = 3;
-	returns.player[Black].pieces[11].y = 7;
+	returns.player[Black].pieces[12].type = Queen;
+	returns.player[Black].pieces[12].x = 3;
+	returns.player[Black].pieces[12].y = 7;
 	returns.board.p[3][7][Type] = Queen;
 	returns.board.p[3][7][Owner] = Black;
-
-	returns.player[Black].pieces[12].type = King;
-	returns.player[Black].pieces[12].x = 4;
-	returns.player[Black].pieces[12].y = 7;
-	returns.board.p[4][7][Type] = King;
-	returns.board.p[4][7][Owner] = Black;
 
 	returns.player[Black].pieces[13].type = Bishop;
 	returns.player[Black].pieces[13].x = 5;
@@ -285,16 +284,16 @@ Piece* findPiecePlayer(Player player, uint xPos, uint yPos) {
 	return(NULL);
 }
 
-Piece* findPiece(Game game, uint xPos, uint yPos) {
-	for (int cPiece = 0; cPiece < game.player[White].pieceC; cPiece++) {
-		if (game.player[White].pieces[cPiece].x == xPos && game.player[White].pieces[cPiece].y == yPos) {
-			return(&game.player[White].pieces[cPiece]);
+Piece* findPiece(Game* game, uint xPos, uint yPos) {
+	for (int cPiece = 0; cPiece < game->player[White].pieceC; cPiece++) {
+		if (game->player[White].pieces[cPiece].x == xPos && game->player[White].pieces[cPiece].y == yPos) {
+			return(&game->player[White].pieces[cPiece]);
 		}
 	}
 
-	for (int cPiece = 0; cPiece < game.player[Black].pieceC; cPiece++) {
-		if (game.player[Black].pieces[cPiece].x == xPos && game.player[Black].pieces[cPiece].y == yPos) {
-			return(&game.player[Black].pieces[cPiece]);
+	for (int cPiece = 0; cPiece < game->player[Black].pieceC; cPiece++) {
+		if (game->player[Black].pieces[cPiece].x == xPos && game->player[Black].pieces[cPiece].y == yPos) {
+			return(&game->player[Black].pieces[cPiece]);
 		}
 	}
 
@@ -332,7 +331,22 @@ uint movePiece(Game* game, Piece* piece, uint newX, uint newY) {
 	return(0);
 }
 
+//Doesn't check if it's an illegal move, but it at least properly takes a piece when moving a piece onto the square
+void movePieceTaking(Game* game, Piece* piece, uint newX, uint newY) {
+	if (game->board.p[newX][newY][Owner] != Neither) {
+		removePiece(&game->player[game->board.p[newX][newY][Owner]], *findPiecePlayer(game->player[game->board.p[newX][newY][Owner]], newX, newY));
+	}
 
+	game->board.p[newX][newY][Type] = piece->type;
+	game->board.p[newX][newY][Owner] = game->board.p[piece->x][piece->y][Owner];//steal the owner out of the past
+	game->board.p[piece->x][piece->y][Type] = Empty;
+	game->board.p[piece->x][piece->y][Owner] = Neither;
+
+	piece->x = newX;
+	piece->y = newY;
+}
+
+//force it through, very unsafe. Use 'movePieceTaking' for diong this more properly.
 void movePieceForce(Board* board, Piece* piece, uint newX, uint newY) {
 	board->p[newX][newY][Type] = piece->type;
 	board->p[newX][newY][Owner] = board->p[piece->x][piece->y][Owner];//steal the owner out of the past

@@ -4,7 +4,7 @@
 
 
 #include "chessBase.h"
-#include"AI.h"
+#include "AI.h"
 
 #include <stdio.h>
 #include <stdint.h>
@@ -22,20 +22,23 @@ int main(void) {
 
 	clock_t start, end;
 	double cpu_time_used;
-
+	printBoard(game.board);
 	start = clock();
 	precacheKnightMoves();
 	end = clock();
-	cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
+	cpu_time_used = ((double)((unsigned long long)end - (unsigned long long)start)) / CLOCKS_PER_SEC;
 	printf("Precache time: %f\n", cpu_time_used);
 
+	uint depth = 0;
+	printf("Enter Depth: \n");
+	depth = (uint) (getchar() - '0');
 	start = clock();
-	iterateLegalMoves(game, White, 6);
+	iterateLegalMoves(game, White, depth);
 	
 	end = clock();
-	cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
+	cpu_time_used = ((double)((unsigned long long)end - (unsigned long long)start)) / CLOCKS_PER_SEC;
 	printf("Board Prediction time: %f\n", cpu_time_used);
-	printBoard(game.board);
+	
 
 
 
