@@ -55,6 +55,7 @@ int16_t scoreAndSave(int16_t* bestMoves, Game* game, uint player, int8_t PieceTo
 
 
 
+
 //... have it be odd depth
 Move iterateLegalMoves(Game game, uint player, uint depth) {
 	printf("\nLooking %d deep.\n", depth);
@@ -109,26 +110,7 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 			givenPiece = games[curDepth].player[curPlayer].pieces[PieceToMove[curDepth]];
 
 			//run through all the types, each one has internal code to handle move gen
-			if (givenPiece.type == Knight) {
-
-				//Optimization, instead of copying over, have checks on the stuff later to see if we're moving a pawn
-				//and rely more on the current index we store than this.
-				MoveCount[curDepth] = AllLegalMoves[givenPiece.x][givenPiece.y].moveC;
-				uint cLegalMove = 0;
-				uint toX = 0;
-				uint toY = 0;
-				for (int cM = 0; cM < AllLegalMoves[givenPiece.x][givenPiece.y].moveC; cM++) {
-					toX = AllLegalMoves[givenPiece.x][givenPiece.y].toX[cM];
-					toY = AllLegalMoves[givenPiece.x][givenPiece.y].toY[cM];
-					Moves[curDepth][cLegalMove][X] = toX;
-					Moves[curDepth][cLegalMove][Y] = toY;
-					MoveCount[curDepth] -= games[curDepth].board.p[toX][toY][Owner] == curPlayer;
-					//cM += games[curDepth].board.p[toX][toY][Owner] != curPlayer;
-					cLegalMove += games[curDepth].board.p[toX][toY][Owner] != curPlayer;
-				}
-
-			}
-			/*else if (givenPiece.type == Pawn) {
+			if (givenPiece.type == Pawn) {
 				//legal pawn moves are forward 2 if on base, forward 1 otherwise, capture forward diagonally 
 
 				//one ahead
@@ -138,21 +120,23 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 					Moves[curDepth][MoveCount[curDepth]][0] = tempX;
 					Moves[curDepth][MoveCount[curDepth]][1] = tempY;
 					MoveCount[curDepth]++;
-				}
 
-				//if we're on our start and can try two ahead
-				tempY += forward;
-				if (givenPiece.y == pawnBaseY) {
-					//two ahead
-					if (games[curDepth].board.p[tempX][tempY][Type] == Empty) {
-						Moves[curDepth][MoveCount[curDepth]][0] = tempX;
-						Moves[curDepth][MoveCount[curDepth]][1] = tempY;
-						MoveCount[curDepth]++;
+					//if we're on our start and can try two ahead
+					if (givenPiece.y == pawnBaseY) {
+						tempY += forward;
+						//two ahead
+						if (games[curDepth].board.p[tempX][tempY][Type] == Empty) {
+							Moves[curDepth][MoveCount[curDepth]][0] = tempX;
+							Moves[curDepth][MoveCount[curDepth]][1] = tempY;
+							MoveCount[curDepth]++;
+						}
 					}
 				}
 
+				
+
 				//checking for captures
-				tempY -= forward;
+				tempY = givenPiece.y + forward;
 				tempX++;
 				if (tempX < BoardDim && tempY < BoardDim && tempY > 0) {
 					if (games[curDepth].board.p[tempX][tempY][Owner] == !curPlayer) {
@@ -171,7 +155,7 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 					}
 				}
 
-			}*/
+			}
 			else if (givenPiece.type == Rook) {
 			LinearMovementCalc:;
 				int8_t baseY = givenPiece.y;
@@ -247,6 +231,24 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 					Moves[curDepth][MoveCount[curDepth]][Y] = baseY;
 					MoveCount[curDepth]++;
 					baseY--;
+				}
+
+			}
+			else if (givenPiece.type == Knight) {
+				//Optimization, instead of copying over, have checks on the stuff later to see if we're moving a knight (cause it precached)?
+				//and rely more on the current index we store than this.
+				MoveCount[curDepth] = AllLegalMoves[givenPiece.x][givenPiece.y].moveC;
+				uint cLegalMove = 0;
+				uint toX = 0;
+				uint toY = 0;
+				for (int cM = 0; cM < AllLegalMoves[givenPiece.x][givenPiece.y].moveC; cM++) {
+					toX = AllLegalMoves[givenPiece.x][givenPiece.y].toX[cM];
+					toY = AllLegalMoves[givenPiece.x][givenPiece.y].toY[cM];
+					Moves[curDepth][cLegalMove][X] = toX;
+					Moves[curDepth][cLegalMove][Y] = toY;
+					MoveCount[curDepth] -= games[curDepth].board.p[toX][toY][Owner] == curPlayer;
+					//cM += games[curDepth].board.p[toX][toY][Owner] != curPlayer;
+					cLegalMove += games[curDepth].board.p[toX][toY][Owner] != curPlayer;
 				}
 
 			}
@@ -412,13 +414,14 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 			goto SelectNext;
 		}
 
-
-
 		
 		//Now that the piece is selected, moves laid out, copy the current board into the next and apply the move.
-		//games[curDepth + 1] = games[curDepth];
-		memcpy(&games[curDepth + 1], &games[curDepth], sizeof(Game));
+		games[curDepth + 1] = games[curDepth];
 
+		//memcpy(&games[curDepth + 1], &games[curDepth], sizeof(Game));
+		int state = 0;
+		//state = validateGame(&games[curDepth]);
+		// 
 		//Dive down one, resetting all the variables for the upcoming layer as we go in. (If diving down we don't need to save what was below, as this is a new branch)
 		curDepth++;
 
@@ -436,6 +439,7 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 			bestMoves[curDepth][yDest] = -1;
 		}
 		
+			
 
 		//Update the new board with the given move
 		movePieceTaking(&games[curDepth].board,//board
@@ -443,11 +447,27 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 			Moves[curDepth - 1][MoveIndex[curDepth - 1]][X],//x dest
 			Moves[curDepth - 1][MoveIndex[curDepth - 1]][Y]//y dest
 		);
+
+		/*if (state == -1) {
+			printBoard(games[curDepth].board);
+			printf("\n\n\n");
+		}*/
+
 #ifdef PRINT_BOARDS_SOLVING
 		printf("\n\nDepth: %d\n", curDepth);
 		printBoard(games[curDepth].board);
+		//Sleep(100);
 #endif
 
+		//debug temp
+		/*if (curDepth == 0 || curDepth == 1 || curDepth == 2) {
+			if (games[curDepth].board.p[4][3][Type] == Pawn && games[curDepth].board.p[4][3][Owner] == White) {
+				if (games[curDepth].board.p[5][4][Type] == Pawn && games[curDepth].board.p[5][4][Owner] == Black) {
+					printf("here");
+				}
+			}
+		}*/
+		
 		
 	IllegalMoveCheck:;
 		//check if this is an illegal move
@@ -465,62 +485,122 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 		const uint ourY = games[curDepth].player[curPlayer].pieces[0].y;
 		for (int cP = 0; cP < games[curDepth].player[!curPlayer].pieceC; cP++) {
 			curEnP = &games[curDepth].player[!curPlayer].pieces[cP];
+			
 
-			if (curEnP->type == Rook) {//linear boi
-			LinearKingTakeCheck:;//for queenie
-				if (curEnP->x == ourX) {//check to see if on same x first off
-					//if so, see if it can slip down on us
-					if (curEnP->y > ourY) {
-						for (uint cY = curEnP - 1; cY > ourY; cY--) {
-							if (games[curDepth].board.p[curEnP->x][cY][Type]) {
-								continue;//nah, this rook hit something on its way. Doesn't matter what, it just means the rook couldn't take the king at this go
+			if (curEnP->type == Rook) {
+				IllegalMoveCheckLinear:;
+				//if on the same vertical
+				if (curEnP->x == ourX) {
+					if (curEnP->y > ourY) {//and above
+						//check if it can come down to us and whack us
+						for (uint cY = curEnP->y - 1; cY > ourY; cY--) {
+							if (games[curDepth].board.p[ourX][cY][Type]) {
+								goto EndOfIllegalMoveLoop;//blocker, we need to continue the outer loop
 							}
 						}
-						#ifdef PRINT_BOARDS_SOLVING
-						printf("^ Illegal move, ignoring ^\n\n\n");
+						#ifdef PRINT_ILLEGAL_MOVE_FOUND
+						printOutTheMove
 						#endif
-						goto HadIllegalMove;//There was no obstruction
-					}
-					else {//or up on us. /Technically/, if the Ys are on top of each other, this likely wont work properly, but at that point the pieces should be merged...
-						for (uint cY = curEnP - 1; cY < ourY; cY++) {
-							if (games[curDepth].board.p[curEnP->x][cY][Type]) {
-								continue;//nah, this rook hit something on its way. Doesn't matter what, it just means the rook couldn't take the king at this go
-							}
-						}
-						#ifdef PRINT_BOARDS_SOLVING
-						printf("^ Illegal move, ignoring ^\n\n\n");
-						#endif
-						goto HadIllegalMove;//There was no obstruction
-					}
-				}
-				else if (curEnP->y == ourY) {//If they're on the same y, they could potentially nick us
-				   //if so, see if it can slip in on us from the right
-					if (curEnP->x > ourX) {
-						for (uint cX = curEnP - 1; cX > ourX; cX--) {
-							if (games[curDepth].board.p[cX][curEnP->y][Type]) {
-								continue;//nah, this rook hit something on its way. Doesn't matter what, it just means the rook couldn't take the king at this go
-							}
-						}
-						#ifdef PRINT_BOARDS_SOLVING
-						printf("^ Illegal move, ignoring ^\n\n\n");
-						#endif
-						goto HadIllegalMove;//There was no obstruction
+						goto HadIllegalMove;//Nothing blocked, illegal move
 					}
 					else {
-						for (uint cX = curEnP - 1; cX < ourX; cX++) {
-							if (games[curDepth].board.p[cX][curEnP->y][Type]) {
-								continue;//nah, this rook hit something on its way. Doesn't matter what, it just means the rook couldn't take the king at this go
+						//check if it can come up to us and whack us
+						for (uint cY = curEnP->y + 1; cY < ourY; cY++) {
+							if (games[curDepth].board.p[ourX][cY][Type]) {
+								goto EndOfIllegalMoveLoop;//blocker, we need to continue the outer loop
 							}
 						}
-						#ifdef PRINT_BOARDS_SOLVING
-						printf("^ Illegal move, ignoring ^\n\n\n");
+						#ifdef PRINT_ILLEGAL_MOVE_FOUND
+						printOutTheMove
 						#endif
-						goto HadIllegalMove;//There was no obstruction
+						goto HadIllegalMove;//Nothing blocked, illegal move
 					}
-
 				}
+			
+				//if on the same horizontal
+				if (curEnP->y == ourY) {
+					if (curEnP->x > ourX) {//and right
+						//check if it can come left to us and whack us
+						for (uint cX = curEnP->x - 1; cX > ourX; cX--) {
+							if (games[curDepth].board.p[cX][ourY][Type]) {
+								goto EndOfIllegalMoveLoop;//blocker, we need to continue the outer loop
+							}
+						}
+						#ifdef PRINT_ILLEGAL_MOVE_FOUND
+						printOutTheMove
+						#endif
+						goto HadIllegalMove;//Nothing blocked, illegal move
+					}
+					else {
+						//check if it can come right to us and whack us
+						for (uint cX = curEnP->x + 1; cX < ourX; cX++) {
+							if (games[curDepth].board.p[cX][ourY][Type]) {
+								goto EndOfIllegalMoveLoop;//blocker, we need to continue the outer loop
+							}
+						}
+						#ifdef PRINT_ILLEGAL_MOVE_FOUND
+						printOutTheMove
+						#endif
+						goto HadIllegalMove;//Nothing blocked, illegal move
+					}
+				}
+			}
+
+			else if (curEnP->type == Bishop) {
+				IllegalMoveCheckDiagonal:;
+
+				//same positive slope diagonal check
+				const uint xDist = ourX - curEnP->x;
+				const uint yDist = ourY - curEnP->y;
+				if (xDist == yDist) {
+					//if overflowed, it's upper right because king has smol num and bishop big
+					if (xDist > BoardDim) {
+						//So, check if the bishop can slide in from the upper right lowering the distance every time,
+						//also starts with the distance lowered one because we shouldn't check the square the bishop is on for an interruption
+						uint curX = curEnP->x - 1;
+						uint curY = curEnP->y - 1;
+						while(curX > ourX) {
+							//If there is a blocker,
+							if (games[curDepth].board.p[curX][curY][Type]) {
+								//we don't need to keep checking and can just move on. This piece still no see king
+								goto EndOfIllegalMoveLoop;
+							}
+							curX--;
+							curY--;
+						}
+						//if no blockers are found, it is an illegal move.
+						#ifdef PRINT_ILLEGAL_MOVE_FOUND
+						printOutTheMove
+						#endif
+						goto HadIllegalMove;//Nothing blocked, illegal move
+					} else {//Otherwise, it's to the bottom left as king big on both and bishop smol
+						//So, check if the bishop can slide in from the lower left
+						uint curX = curEnP->x + 1;
+						uint curY = curEnP->y + 1;
+						while (curX < ourX) {
+							//If there is a blocker,
+							if (games[curDepth].board.p[curX][curY][Type]) {
+								//we don't need to keep checking and can just move on. This piece still no see king
+								goto EndOfIllegalMoveLoop;
+							}
+							curX++;
+							curY++;
+						}
+						//if no blockers are found, it is an illegal move.
+						#ifdef PRINT_ILLEGAL_MOVE_FOUND
+						printOutTheMove
+						#endif
+						goto HadIllegalMove;//Nothing blocked, illegal move
+					}
+				}
+			
+
+				//todo, negative slope check. Erased whiteboard with the logic and too late tonight for it riperoni.
 
 			}
+
+
+		EndOfIllegalMoveLoop:;
 		}
 
 
@@ -555,7 +635,8 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 					MoveCount[curDepth] = 0;
 					PieceToMove[curDepth]++;
 					//if there are no more pieces left at this depth, back up one more.
-					if (PieceToMove[curDepth] >= games[curDepth].player[!curPlayer].pieceC) {
+					//HUGE NOTE, used to check !curPlayer 
+					if (PieceToMove[curDepth] >= games[curDepth].player[curPlayer].pieceC) {
 						if (curDepth - 1 == -1) {//if we're out of depth, be done, as the only way to hit 'out of depth' at this point is to have no more pieces left to check
 							goto Done;
 						}
@@ -577,7 +658,7 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 			curPlayer = !curPlayer;
 		}
 		
-	}
+	}//End of massive while loop
 
 
 Done:;

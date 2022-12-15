@@ -91,7 +91,7 @@ void printPlayer(Player player);
 uint convCharToPos(char inputChar);
 
 //mainly used for player inputs, the AI approaches things from a piece's perspective to being with and thus the piece data doesn't need to be sought out.
-Piece* findPiecePlayer(Player player, uint xPos, uint yPos);
+Piece* findPiecePlayer(Player* player, uint xPos, uint yPos);
 Piece* findPiece(Game* game, uint xPos, uint yPos);
 
 //returns if successful or not.
@@ -99,3 +99,8 @@ uint movePiece(Game* game, Piece* piece, uint newX, uint newY);
 
 //forces the move, good for if the checking is already done.
 void movePieceForce(Board*, Piece*, uint newX, uint newY);
+
+//new safe one
+void movePieceTaking(Game* game, Piece* piece, const uint newX, const uint newY);
+
+int validateGame(Game* game);

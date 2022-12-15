@@ -1,11 +1,14 @@
 #include "chessBase.h"
-#define MAX_DEPTH 32
+#define MAX_DEPTH 16
 #define MAX_MOVES_PER_PIECE 27
 
-#define gotoxy(x, y) printf("\033[%d;%dH", (y), (x))
+//#define gotoxy(x, y) printf("\033[%d;%dH", (y), (x))
 
 #define PRINT_NODES
-#define PRINT_BOARDS_SOLVING
+//#define PRINT_BOARDS_SOLVING
+//#define PRINT_ILLEGAL_MOVE_FOUND
+
+#define printOutTheMove printf("\n\nIllegal move from depth: %d, %d\n", curDepth - 1, curDepth);printBoard(games[curDepth - 1].board);printBoard(games[curDepth].board);printf("^ Illegal move, ignoring ^\n\n\n");
 
 //enum pieces {Empty, King, Queen, Rook, Bishop, Knight, Pawn};
 const static int8_t pieceValOurAgr[] = { 0, 50, 12, 5, 3,3,1 };
@@ -35,5 +38,4 @@ void precacheKnightMoves();
 int16_t scorePosition(Game* game, uint player);
 
 Move iterateLegalMoves(Game game, uint player, uint depth);
-Move runLegalMoves(Game* game, uint player, uint depth);
-int8_t recurseLegalMoves(Game* game, uint player, uint depth);
+int8_t isPositionIllegal(Board board);
