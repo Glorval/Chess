@@ -468,8 +468,7 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 			}
 		}*/
 		
-		
-	IllegalMoveCheck:;
+		IllegalMoveCheck:;
 		//check if this is an illegal move
 		Piece* curEnP = NULL;
 		/*//Special king-move specific- you cannot move a king too close to the enemy king so it can have some 'default' language to try and catch this rather
@@ -550,8 +549,8 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 				IllegalMoveCheckDiagonal:;
 
 				//same positive slope diagonal check
-				const uint xDist = ourX - curEnP->x;
-				const uint yDist = ourY - curEnP->y;
+				uint xDist = ourX - curEnP->x;
+				uint yDist = ourY - curEnP->y;
 				if (xDist == yDist) {
 					//if overflowed, it's upper right because king has smol num and bishop big
 					if (xDist > BoardDim) {
@@ -595,12 +594,74 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 				}
 			
 
-				//todo, negative slope check. Erased whiteboard with the logic and too late tonight for it riperoni.
+				xDist = ourX - curEnP->x;
+				yDist = curEnP->y - ourY;
+				if (xDist == yDist) {
+					//if overflowed, it's lower right
+					if (xDist > BoardDim) {
+						uint curX = curEnP->x - 1;
+						uint curY = curEnP->y + 1;
+						while (curX > ourX) {
+							//If there is a blocker,
+							if (games[curDepth].board.p[curX][curY][Type]) {
+								//we don't need to keep checking and can just move on. This piece still no see king
+								goto EndOfIllegalMoveLoop;
+							}
+							curX--;
+							curY++;
+						}
+						//if no blockers are found, it is an illegal move.
+						#ifdef PRINT_ILLEGAL_MOVE_FOUND
+						printOutTheMove
+						#endif
+						goto HadIllegalMove;//Nothing blocked, illegal move
+					}else{//enemy bishop upper left
+						uint curX = curEnP->x + 1;
+						uint curY = curEnP->y - 1;
+						while (curX < ourX) {
+							//If there is a blocker,
+							if (games[curDepth].board.p[curX][curY][Type]) {
+								//we don't need to keep checking and can just move on. This piece still no see king
+								goto EndOfIllegalMoveLoop;
+							}
+							curX++;
+							curY--;
+						}
+						//if no blockers are found, it is an illegal move.
+						#ifdef PRINT_ILLEGAL_MOVE_FOUND
+						printOutTheMove
+						#endif
+						goto HadIllegalMove;//Nothing blocked, illegal move
+					}
 
+				}
+				continue;
 			}
 
+			else if (curEnP->type == Pawn) {
+				//If the pawn is one in front of us, we could be threatened
+				if (curEnP->y - forward == ourY) {
+					//if one in front and one to the side, that's a diagonal to us
+					if (curEnP->x + 1 == ourX || curEnP->x - 1 == ourX) {
+						//if no blockers are found, it is an illegal move.
+						#ifdef PRINT_ILLEGAL_MOVE_FOUND
+						printOutTheMove
+						#endif
+						goto HadIllegalMove;//Nothing blocked, illegal move
+					}
+				}
+				continue;
+			}
 
-		EndOfIllegalMoveLoop:;
+			else if (curEnP->type == Queen) {
+				goto IllegalMoveCheckLinear;
+			}
+
+			if (curEnP->type == Queen) {
+				goto IllegalMoveCheckDiagonal;
+			}
+
+			EndOfIllegalMoveLoop:;
 		}
 
 
@@ -614,7 +675,7 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 		//Now, if we're at max depth
 		if (curDepth == depth) {
 			//Back up one, score what the position was, 'score and save' only saves if the score is better/worse
-		HadIllegalMove:;
+			HadIllegalMove:;
 			curDepth--;
 			//scoreAndSave(&bestMoves[curDepth], &games[curDepth + 1], player, PieceToMove[curDepth], Moves[curDepth][MoveIndex[curDepth]][X], Moves[curDepth][MoveIndex[curDepth]][Y], curPlayer == player);
 		
@@ -622,7 +683,7 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 			//If no more moves are left on this piece, go to the next piece. 
 			//If there are no more pieces, back up, then try again.
 			//If there is no more room to back up, we are done.
-		SelectNext:;
+			SelectNext:;
 			nodes++;
 			while (1) {
 				//go to the next move on the piece
