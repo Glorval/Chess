@@ -78,7 +78,7 @@ struct game {
 	Board board;
 	Player player[2];
 	//Player black;
-	uint turn;
+	//uint turn;
 };
 typedef struct game Game;
 
@@ -94,6 +94,9 @@ uint convCharToPos(char inputChar);
 Piece* findPiecePlayer(Player* player, uint xPos, uint yPos);
 Piece* findPiece(Game* game, uint xPos, uint yPos);
 
+//removes piece from player's list, takes last piece, overwrites the one to be removed, then decrements the piece count.
+void removePiece(Player* player, Piece* piece);
+
 //returns if successful or not.
 uint movePiece(Game* game, Piece* piece, uint newX, uint newY);
 
@@ -104,3 +107,10 @@ void movePieceForce(Board*, Piece*, uint newX, uint newY);
 void movePieceTaking(Game* game, Piece* piece, const uint newX, const uint newY);
 
 int validateGame(Game* game);
+
+struct compBoard {
+	uint_fast64_t lines[BoardDim];
+};
+typedef struct compBoard FastBoard;
+
+int compBoards(const FastBoard* one, const FastBoard* two);

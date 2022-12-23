@@ -94,13 +94,13 @@ Game startGame(void) {
 		returns.board.p[cPawn - 1][6][Owner] = Black;
 	}
 	//debug
-	/*returns.player[Black].pieces[4].type = Pawn;
-	returns.player[Black].pieces[4].x = 4;
-	returns.player[Black].pieces[4].y = 4;
-	returns.board.p[4][4][Type] = Pawn;
-	returns.board.p[4][4][Owner] = Black;
-	returns.board.p[4][6][Type] = Empty;
-	returns.board.p[4][6][Owner] = Neither;*/
+	returns.player[Black].pieces[1].type = Pawn;
+	returns.player[Black].pieces[1].x = 0;
+	returns.player[Black].pieces[1].y = 3;
+	returns.board.p[0][3][Type] = Pawn;
+	returns.board.p[0][3][Owner] = Black;
+	returns.board.p[0][6][Type] = Empty;
+	returns.board.p[0][6][Owner] = Neither;
 
 
 
@@ -357,15 +357,9 @@ uint movePiece(Game* game, Piece* piece, uint newX, uint newY) {
 
 //Doesn't check if it's an illegal move, but it at least properly takes a piece when moving a piece onto the square
 void movePieceTaking(Game* game, Piece* piece, const uint newX, const uint newY) {
-	uint debug = 0;
+	//uint debug = 0;
 	if (game->board.p[newX][newY][Owner] != Neither) {
-		//debug = 1;
 		Piece* pieceToRemove = findPiecePlayer(&game->player[game->board.p[newX][newY][Owner]], newX, newY);
-		/*printBoard(game->board);
-		printPlayer(game->player[White]);
-		printf("\n\n");
-		printPlayer(game->player[Black]);*/
-		
 		if (pieceToRemove == NULL) {
 			printf("error From was %u, %u. To was %u, %u\n", piece->x, piece->y, newX, newY);
 			printf("Error, tried to move onto a square with an owner listed, but there was no piece to remove there?\n");
@@ -377,14 +371,6 @@ void movePieceTaking(Game* game, Piece* piece, const uint newX, const uint newY)
 		}
 		removePiece(&game->player[game->board.p[newX][newY][Owner]], pieceToRemove);
 	}
-
-	/*if (piece->x == 7 && piece->y == 7 && piece->type == Rook
-		&& game->board.p[4][2][Type] == Pawn) {
-		debug = 1;
-		printBoard(game->board);
-		printPlayer(game->player[Black]);
-		printf("From was %u, %u. To was %u, %u\n", piece->x, piece->y, newX, newY);
-	}*/
 	
 	game->board.p[newX][newY][Type] = piece->type;
 	game->board.p[newX][newY][Owner] = game->board.p[piece->x][piece->y][Owner];//steal the owner out of the past
@@ -392,14 +378,7 @@ void movePieceTaking(Game* game, Piece* piece, const uint newX, const uint newY)
 	game->board.p[piece->x][piece->y][Owner] = Neither;
 	
 	piece->x = newX;
-	piece->y = newY;
-	/*if (debug) {
-		printBoard(game->board);
-		printPlayer(game->player[Black]);
-		printf("Piece ended up as %u, %u\n", piece->x, piece->y);
-		printf("\n\n\n\n");
-	}*/
-	
+	piece->y = newY;	
 }
 
 //force it through, very unsafe. Use 'movePieceTaking' for diong this more properly.
@@ -433,4 +412,13 @@ int validateGame(Game* game) {
 		}
 	}
 	return(0);
+}
+
+int compBoards(const FastBoard* one, const FastBoard* two) {
+	for (uint cP = 0; cP < BoardDim; cP++) {
+		if (one->lines[cP] != two->lines[cP]) {
+			return(-1);
+		}
+	}
+	return(1);
 }

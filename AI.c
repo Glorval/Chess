@@ -8,11 +8,11 @@
 //slow
 int16_t scorePosition(Game* game, uint player) {
 	int16_t score = 0;
-	for (int cP = 0; cP < game->player[player].pieceC; cP++) {
+	for (uint cP = 0; cP < game->player[player].pieceC; cP++) {
 		score += pieceValOurAgr[game->player[player].pieces[cP].type];
 	}
 
-	for (int cP = 0; cP < game->player[!player].pieceC; cP++) {
+	for (uint cP = 0; cP < game->player[!player].pieceC; cP++) {
 		score -= pieceValOppAgr[game->player[!player].pieces[cP].type];
 	}
 
@@ -28,7 +28,7 @@ const uint yDest = 3;
 //goodBad is whether we're looking for best or worst, if curPlayer == us, we score for the best move we can make (Because we don't want to make a bad move ofc)
 //if curPlayer != us, score for the 'worst move'
 //SLOW
-int16_t scoreAndSave(int16_t* bestMoves, Game* game, uint player, int8_t PieceToMove, uint potentialXDest, uint potentialYDest, uint goodBad) {
+int16_t scoreAndSave(int16_t* bestMoves, Game* game, uint player, uint PieceToMove, uint potentialXDest, uint potentialYDest, uint goodBad) {
 	//score = 0 
 	int16_t posScore = scorePosition(game, player);
 	if (goodBad) {
@@ -71,16 +71,23 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 	//On the following, player is not needed to be stored as depth of 10 is assumed 5 moves each, thus it alternates player naturally in the memory
 
 	//depth, then piece index to move
-	int8_t PieceToMove[MAX_DEPTH] = { 0 };
+	uint PieceToMove[MAX_DEPTH] = { 0 };
 
 	//Moves stored as depth, move list, destination X/Y. Assumed to be for the currently selected piece
-	int8_t Moves[MAX_DEPTH][MAX_MOVES_PER_PIECE][2] = { 0 };
+	uint Moves[MAX_DEPTH][MAX_MOVES_PER_PIECE][2] = { 0 };
 
 	//what move we're currently trying on this piece
 	uint MoveIndex[MAX_DEPTH] = { 0 };
 
 	//how many moves do we have at the depth
 	uint MoveCount[MAX_DEPTH] = { 0 };
+
+	//The x/y of a pawn that just moved two foward. 
+	//How this works is that on depth A, if a pawn moves two forward, depth A+1 will have the spot it moved to written in to check against.
+	//Setting it to 0 should be safe because that's not a place that can physically be en passant'd on
+	uint EnPassantKnowledge[MAX_DEPTH + 1][2] = { 0 };
+	uint EnPassantMoveInd[MAX_DEPTH] = {MAX_MOVES_PER_PIECE + 1};//The index of the current piece move that can trigger an en passant, as in, a pawn just moved two forward
+	uint WeCanEnPassantInd[MAX_DEPTH] = { MAX_MOVES_PER_PIECE + 1 };//The move index we can actually en passant on, needed to remove the taken pawn properly.
 
 	//game boards
 	Game games[MAX_DEPTH] = { game, 0 };
@@ -128,12 +135,12 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 						if (games[curDepth].board.p[tempX][tempY][Type] == Empty) {
 							Moves[curDepth][MoveCount[curDepth]][0] = tempX;
 							Moves[curDepth][MoveCount[curDepth]][1] = tempY;
+							EnPassantMoveInd[curDepth] = MoveCount[curDepth];//Save this  two ahead move's index such that later we can set the en passant stuff
+
 							MoveCount[curDepth]++;
 						}
 					}
 				}
-
-				
 
 				//checking for captures
 				tempY = givenPiece.y + forward;
@@ -151,6 +158,27 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 					if (games[curDepth].board.p[tempX][tempY][Owner] == !curPlayer) {
 						Moves[curDepth][MoveCount[curDepth]][0] = tempX;
 						Moves[curDepth][MoveCount[curDepth]][1] = tempY;
+						MoveCount[curDepth]++;
+					}
+				}
+
+				//now check to see if we can en passant, 
+				//it needs an enemy pawn to move two forward and end up next to us for it to work.
+				//first see if we're on the right Y area
+				if(givenPiece.y == EnPassantKnowledge[curDepth][Y]){
+					//now see if we are one left of it
+					if(givenPiece.x + 1 == EnPassantKnowledge[curDepth][X]){
+						Moves[curDepth][MoveCount[curDepth]][0] = givenPiece.x + 1;
+						Moves[curDepth][MoveCount[curDepth]][1] = givenPiece.y + forward;
+						WeCanEnPassantInd[curDepth] = MoveCount[curDepth];
+						MoveCount[curDepth]++;						
+					}
+
+					//now see if we are one right of it
+					if (givenPiece.x - 1 == EnPassantKnowledge[curDepth][X]) {
+						Moves[curDepth][MoveCount[curDepth]][0] = givenPiece.x - 1;
+						Moves[curDepth][MoveCount[curDepth]][1] = givenPiece.y + forward;
+						WeCanEnPassantInd[curDepth] = MoveCount[curDepth];
 						MoveCount[curDepth]++;
 					}
 				}
@@ -418,10 +446,6 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 		//Now that the piece is selected, moves laid out, copy the current board into the next and apply the move.
 		games[curDepth + 1] = games[curDepth];
 
-		//memcpy(&games[curDepth + 1], &games[curDepth], sizeof(Game));
-		int state = 0;
-		//state = validateGame(&games[curDepth]);
-		// 
 		//Dive down one, resetting all the variables for the upcoming layer as we go in. (If diving down we don't need to save what was below, as this is a new branch)
 		curDepth++;
 
@@ -437,54 +461,50 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 			bestMoves[curDepth][pieceIndex] = -1;
 			bestMoves[curDepth][xDest] = -1;
 			bestMoves[curDepth][yDest] = -1;
+			EnPassantKnowledge[curDepth][X] = 0;
+			EnPassantKnowledge[curDepth][Y] = 0;
+			EnPassantMoveInd[curDepth] = MAX_MOVES_PER_PIECE + 1;
+			WeCanEnPassantInd[curDepth] = MAX_MOVES_PER_PIECE + 1;
 		}
 		
+		 
 			
-
+		const uint prevDepth = curDepth - 1;
 		//Update the new board with the given move
-		movePieceTaking(&games[curDepth].board,//board
-			&games[curDepth].player[curPlayer].pieces[PieceToMove[curDepth - 1]],//piece information from this simulated game
-			Moves[curDepth - 1][MoveIndex[curDepth - 1]][X],//x dest
-			Moves[curDepth - 1][MoveIndex[curDepth - 1]][Y]//y dest
+		movePieceTaking(&games[curDepth],//board
+			&games[curDepth].player[curPlayer].pieces[PieceToMove[prevDepth]],//piece information from this simulated game
+			Moves[prevDepth][MoveIndex[prevDepth]][X],//x dest
+			Moves[prevDepth][MoveIndex[prevDepth]][Y]//y dest
 		);
 
-		/*if (state == -1) {
-			printBoard(games[curDepth].board);
-			printf("\n\n\n");
-		}*/
+		//Additional move logic for en passanting
+		if(WeCanEnPassantInd[prevDepth] == MoveIndex[prevDepth]){
+			printf("Trying to en passant.\n");
+			uint pawnToTakeX = Moves[prevDepth][MoveIndex[prevDepth]][X];
+			uint pawnToTakeY= Moves[prevDepth][MoveIndex[prevDepth]][Y] - forward;
+			removePiece(&games[curDepth].player[!curPlayer], findPiecePlayer(&games[curDepth].player[!curPlayer], pawnToTakeX, pawnToTakeY));
+			games[curDepth].board.p[pawnToTakeX][pawnToTakeY][Type] = Empty;
+			games[curDepth].board.p[pawnToTakeX][pawnToTakeY][Owner] = Neither;
+		}
 
-#ifdef PRINT_BOARDS_SOLVING
-		printf("\n\nDepth: %d\n", curDepth);
+
+		#ifdef PRINT_BOARDS_SOLVING
+		printf("\n\nDepth: %d. Current node: %u\n", curDepth, nodes);
 		printBoard(games[curDepth].board);
 		//Sleep(100);
-#endif
+		#endif
+		#ifdef PRINT_BOARDS_DELAY
+		Sleep(250);
+		#endif
 
-		//debug temp
-		/*if (curDepth == 0 || curDepth == 1 || curDepth == 2) {
-			if (games[curDepth].board.p[4][3][Type] == Pawn && games[curDepth].board.p[4][3][Owner] == White) {
-				if (games[curDepth].board.p[5][4][Type] == Pawn && games[curDepth].board.p[5][4][Owner] == Black) {
-					printf("here");
-				}
-			}
-		}*/
-		
 		IllegalMoveCheck:;
 		//check if this is an illegal move
 		Piece* curEnP = NULL;
-		/*//Special king-move specific- you cannot move a king too close to the enemy king so it can have some 'default' language to try and catch this rather
-		//than trying to figure out all enemy king moves that could put us in check.... because that's also impossible lol
-		if (givenPiece.type == King) {
-			int8_t xdist = (int8_t)games[curDepth].player[!curPlayer].pieces[0].x - (int8_t)givenPiece.x;
-			int8_t ydist = (int8_t)games[curDepth].player[!curPlayer].pieces[0].y - (int8_t)givenPiece.y;
-			if (xdist <= 1 && ydist <= 1) {
-				goto SelectNext;
-			}
-		}*/
 		const uint ourX = games[curDepth].player[curPlayer].pieces[0].x;
 		const uint ourY = games[curDepth].player[curPlayer].pieces[0].y;
 		for (int cP = 0; cP < games[curDepth].player[!curPlayer].pieceC; cP++) {
 			curEnP = &games[curDepth].player[!curPlayer].pieces[cP];
-			
+			//King isn't listed here because king moves pre-check if they're illegally close to the enemy king cause optimization I guess idk
 
 			if (curEnP->type == Rook) {
 				IllegalMoveCheckLinear:;
@@ -544,7 +564,6 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 					}
 				}
 			}
-
 			else if (curEnP->type == Bishop) {
 				IllegalMoveCheckDiagonal:;
 
@@ -637,7 +656,6 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 				}
 				continue;
 			}
-
 			else if (curEnP->type == Pawn) {
 				//If the pawn is one in front of us, we could be threatened
 				if (curEnP->y - forward == ourY) {
@@ -652,25 +670,34 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 				}
 				continue;
 			}
-
 			else if (curEnP->type == Queen) {
 				goto IllegalMoveCheckLinear;
 			}
-
 			if (curEnP->type == Queen) {
 				goto IllegalMoveCheckDiagonal;
 			}
 
 			EndOfIllegalMoveLoop:;
 		}
-
-
-
-
-
-
-
 		
+		//if we make it here, it was a legal move
+
+		//Now, if we just did a double mover as a pawn, as indicated by the index of the move being the same as the move we're on, set our new position as the thing
+		if (EnPassantMoveInd[prevDepth] == MoveIndex[prevDepth]) {
+			//printf("^ Saving an en passant possibility at depth %u to %u, %u\n", curDepth, Moves[prevDepth][MoveIndex[prevDepth]][X], Moves[prevDepth][MoveIndex[prevDepth]][Y]);
+			EnPassantKnowledge[curDepth][X] = Moves[prevDepth][MoveIndex[prevDepth]][X];//the issue is 'ourx' isnt the piece dum dum
+			EnPassantKnowledge[curDepth][Y] = Moves[prevDepth][MoveIndex[prevDepth]][Y];
+		}
+
+		/*if (nodes == 44) {
+			printf("debug");
+		}*/
+
+		nodes++;
+		#ifdef PRINT_NODES_FULL
+		printf("CurNode: %u, depth %u. Move index is on %u, piece to move is on %u.\n", nodes, curDepth, MoveIndex[curDepth], PieceToMove[curDepth]);
+		#endif
+
 
 		//Now, if we're at max depth
 		if (curDepth == depth) {
@@ -679,12 +706,13 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 			curDepth--;
 			//scoreAndSave(&bestMoves[curDepth], &games[curDepth + 1], player, PieceToMove[curDepth], Moves[curDepth][MoveIndex[curDepth]][X], Moves[curDepth][MoveIndex[curDepth]][Y], curPlayer == player);
 		
+			
 			//Advance the move on the current piece,
 			//If no more moves are left on this piece, go to the next piece. 
 			//If there are no more pieces, back up, then try again.
 			//If there is no more room to back up, we are done.
 			SelectNext:;
-			nodes++;
+			
 			while (1) {
 				//go to the next move on the piece
 				MoveIndex[curDepth]++;
@@ -695,6 +723,8 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 					MoveIndex[curDepth] = 0;
 					MoveCount[curDepth] = 0;
 					PieceToMove[curDepth]++;
+					WeCanEnPassantInd[curDepth] = MAX_MOVES_PER_PIECE + 1;
+					EnPassantMoveInd[curDepth] = MAX_MOVES_PER_PIECE + 1;
 					//if there are no more pieces left at this depth, back up one more.
 					//HUGE NOTE, used to check !curPlayer 
 					if (PieceToMove[curDepth] >= games[curDepth].player[curPlayer].pieceC) {
@@ -758,75 +788,75 @@ void precacheKnightMoves() {
 	int8_t toX = 0;
 	int8_t toY = 0;
 	//knight
-	for (int cX = 0; cX < 8; cX++) {
-		for (int cY = 0; cY < 8; cY++) {
+	for (int8_t cX = 0; cX < 8; cX++) {
+		for (int8_t cY = 0; cY < 8; cY++) {
 			//up right
-			toX = cX + 1;
-			toY = cY + 2;
-			if (toX < 8 && toY < 8) {
+			toX = cX + (int8_t)1;
+			toY = cY + (int8_t)2;
+			if (toX < (int8_t)8 && toY < (int8_t)8) {
 				AllLegalMoves[cX][cY].toX[AllLegalMoves[cX][cY].moveC] = toX;
 				AllLegalMoves[cX][cY].toY[AllLegalMoves[cX][cY].moveC] = toY;
 				AllLegalMoves[cX][cY].moveC++;
 			}
 
 			//right up
-			toX = cX + 2;
-			toY = cY + 1;
-			if (toX < 8 && toY < 8) {
+			toX = cX + (int8_t)2;
+			toY = cY + (int8_t)1;
+			if (toX < (int8_t)8 && toY < (int8_t)8) {
 				AllLegalMoves[cX][cY].toX[AllLegalMoves[cX][cY].moveC] = toX;
 				AllLegalMoves[cX][cY].toY[AllLegalMoves[cX][cY].moveC] = toY;
 				AllLegalMoves[cX][cY].moveC++;
 			}
 
 			//right down
-			toX = cX + 2;
-			toY = cY - 1;
-			if (toX < 8 && toY >= 0) {
+			toX = cX + (int8_t)2;
+			toY = cY - (int8_t)1;
+			if (toX < (int8_t)8 && toY >= (int8_t)0) {
 				AllLegalMoves[cX][cY].toX[AllLegalMoves[cX][cY].moveC] = toX;
 				AllLegalMoves[cX][cY].toY[AllLegalMoves[cX][cY].moveC] = toY;
 				AllLegalMoves[cX][cY].moveC++;
 			}
 
 			//down right
-			toX = cX + 1;
-			toY = cY - 2;
-			if (toX < 8 && toY >= 0) {
+			toX = cX + (int8_t)1;
+			toY = cY - (int8_t)2;
+			if (toX < (int8_t)8 && toY >= (int8_t)0) {
 				AllLegalMoves[cX][cY].toX[AllLegalMoves[cX][cY].moveC] = toX;
 				AllLegalMoves[cX][cY].toY[AllLegalMoves[cX][cY].moveC] = toY;
 				AllLegalMoves[cX][cY].moveC++;
 			}
 
 			//down left
-			toX = cX - 1;
-			toY = cY - 2;
-			if (toX >= 0 && toY >= 0) {
+			toX = cX - (int8_t)1;
+			toY = cY - (int8_t)2;
+			if (toX >= (int8_t)0 && toY >= (int8_t)0) {
 				AllLegalMoves[cX][cY].toX[AllLegalMoves[cX][cY].moveC] = toX;
 				AllLegalMoves[cX][cY].toY[AllLegalMoves[cX][cY].moveC] = toY;
 				AllLegalMoves[cX][cY].moveC++;
 			}
 
 			//left down
-			toX = cX - 2;
-			toY = cY - 1;
-			if (toX >= 0 && toY >= 0) {
+			toX = cX - (int8_t)2;
+			toY = cY - (int8_t)1;
+			if (toX >= (int8_t)0 && toY >= (int8_t)0) {
 				AllLegalMoves[cX][cY].toX[AllLegalMoves[cX][cY].moveC] = toX;
 				AllLegalMoves[cX][cY].toY[AllLegalMoves[cX][cY].moveC] = toY;
 				AllLegalMoves[cX][cY].moveC++;
 			}
 
 			//left up
-			toX = cX - 2;
-			toY = cY + 1;
-			if (toX >= 0 && toY < 8) {
+			toX = cX - (int8_t)2;
+			toY = cY + (int8_t)1;
+			if (toX >= (int8_t)0 && toY < (int8_t)8) {
 				AllLegalMoves[cX][cY].toX[AllLegalMoves[cX][cY].moveC] = toX;
 				AllLegalMoves[cX][cY].toY[AllLegalMoves[cX][cY].moveC] = toY;
 				AllLegalMoves[cX][cY].moveC++;
 			}
 
 			//up left
-			toX = cX - 1;
-			toY = cY + 2;
-			if (toX >= 0 && toY < 8) {
+			toX = cX - (int8_t)1;
+			toY = cY + (int8_t)2;
+			if (toX >= (int8_t)0 && toY < (int8_t)8) {
 				AllLegalMoves[cX][cY].toX[AllLegalMoves[cX][cY].moveC] = toX;
 				AllLegalMoves[cX][cY].toY[AllLegalMoves[cX][cY].moveC] = toY;
 				AllLegalMoves[cX][cY].moveC++;

@@ -5,15 +5,17 @@
 //#define gotoxy(x, y) printf("\033[%d;%dH", (y), (x))
 
 #define PRINT_NODES
-//#define PRINT_BOARDS_SOLVING
+//#define PRINT_BOARDS_DELAY
+#define PRINT_BOARDS_SOLVING
+//#define PRINT_NODES_FULL
 //#define PRINT_ILLEGAL_MOVE_FOUND
 
 #define printOutTheMove printf("\n\nIllegal move from depth: %d, %d\n", curDepth - 1, curDepth);printBoard(games[curDepth - 1].board);printBoard(games[curDepth].board);printf("^ Illegal move, ignoring ^\n\n\n");
 
 //enum pieces {Empty, King, Queen, Rook, Bishop, Knight, Pawn};
-const static int8_t pieceValOurAgr[] = { 0, 50, 12, 5, 3,3,1 };
+const static int16_t pieceValOurAgr[] = { 0, 50, 12, 5, 3,3,1 };
 
-const static int8_t pieceValOppAgr[] = { 0, 75, 11, 6, 4, 3, 1 };
+const static int16_t pieceValOppAgr[] = { 0, 75, 11, 6, 4, 3, 1 };
 
 struct move {
 	uint PieceToMove;//index in player list

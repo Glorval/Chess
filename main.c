@@ -12,7 +12,7 @@
 
 
 void flushInput(void) {
-	char c = 0;
+	int c = 0;
 	while ((c = getchar()) != '\n' && c != EOF) {}
 }
 
