@@ -94,13 +94,13 @@ Game startGame(void) {
 		returns.board.p[cPawn - 1][6][Owner] = Black;
 	}
 	//debug
-	returns.player[Black].pieces[1].type = Pawn;
+	/*returns.player[Black].pieces[1].type = Pawn;
 	returns.player[Black].pieces[1].x = 0;
 	returns.player[Black].pieces[1].y = 3;
 	returns.board.p[0][3][Type] = Pawn;
 	returns.board.p[0][3][Owner] = Black;
 	returns.board.p[0][6][Type] = Empty;
-	returns.board.p[0][6][Owner] = Neither;
+	returns.board.p[0][6][Owner] = Neither;*/
 
 
 
@@ -168,15 +168,18 @@ void printBoard(Board board) {
 		//print the current y label and then the frame
 		printf(" %c%c", yLables[cY], 179);
 
+		#ifndef COMPAT_MODE
 		//alternate between printing a half-square for white & black squares to center the board
 		if (cY % 2 == 0) {
 			setBlackFore;
 			printf("%c", 222);
-		}
-		else {
+		} else {
 			setWhiteFore;
 			printf("%c", 222);
 		}
+		#endif
+
+		
 
 		//loop through the x axis
 		for (uint cX = 0; cX < BoardDim; cX++) {
@@ -198,7 +201,7 @@ void printBoard(Board board) {
 				else {
 					//black pieces, black square
 					#ifdef COMPAT_MODE
-					printf("\33[97;100m%c", piecesSymbol[board.p[cX][cY][Type]]);
+					printf("\33[30;100m%c", piecesSymbol[board.p[cX][cY][Type]]);
 					#else
 					setBlackSquare;
 					setFullBlackFore;
@@ -226,7 +229,7 @@ void printBoard(Board board) {
 				if (board.p[cX][cY][Owner] == White) {
 					//White piece, white square
 					#ifdef COMPAT_MODE
-					printf("\33[97;100m%c", piecesSymbol[board.p[cX][cY][Type]]);
+					printf("\33[97;47m%c", piecesSymbol[board.p[cX][cY][Type]]);
 					#else
 					setWhiteSquare;//white background
 					setFullWhiteFore;
@@ -236,7 +239,7 @@ void printBoard(Board board) {
 				else {
 					//black pieces, white square
 					#ifdef COMPAT_MODE
-					printf("\33[97;100m%c ", piecesSymbol[board.p[cX][cY][Type]]);
+					printf("\33[30;47m%c", piecesSymbol[board.p[cX][cY][Type]]);
 					#else
 					setWhiteSquare;//white background
 					setFullBlackFore;
@@ -260,6 +263,9 @@ void printBoard(Board board) {
 			printf("\33[0m");
 		}
 		//far right section of frame
+		#ifdef COMPAT_MODE
+		printf(" ");
+		#endif
 		printf("%c\n", 179);
 	}
 	//bottom left corner of frame

@@ -163,7 +163,7 @@
       <FloatingPointModel>Precise</FloatingPointModel>
       <FloatingPointExceptions>true</FloatingPointExceptions>
       <ForceConformanceInForLoopScope>false</ForceConformanceInForLoopScope>
-      <StructMemberAlignment>1Byte</StructMemberAlignment>
+      <StructMemberAlignment>Default</StructMemberAlignment>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

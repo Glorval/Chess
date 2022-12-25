@@ -28,7 +28,7 @@ const uint yDest = 3;
 //goodBad is whether we're looking for best or worst, if curPlayer == us, we score for the best move we can make (Because we don't want to make a bad move ofc)
 //if curPlayer != us, score for the 'worst move'
 //SLOW
-int16_t scoreAndSave(int16_t* bestMoves, Game* game, uint player, uint PieceToMove, uint potentialXDest, uint potentialYDest, uint goodBad) {
+void scoreAndSave(int16_t* bestMoves, Game* game, uint player, uint PieceToMove, uint potentialXDest, uint potentialYDest, uint goodBad) {
 	//score = 0 
 	int16_t posScore = scorePosition(game, player);
 	if (goodBad) {
@@ -40,7 +40,7 @@ int16_t scoreAndSave(int16_t* bestMoves, Game* game, uint player, uint PieceToMo
 		}
 	}
 	else {
-		if (posScore < bestMoves[Score]) {
+		if (posScore * -1 > bestMoves[Score]) {
 			bestMoves[Score] = posScore;
 			bestMoves[pieceIndex] = PieceToMove;
 			bestMoves[xDest] = potentialXDest;
@@ -49,7 +49,7 @@ int16_t scoreAndSave(int16_t* bestMoves, Game* game, uint player, uint PieceToMo
 	}
 	
 
-	return(posScore);
+	//return(posScore);
 }
 
 
@@ -58,7 +58,7 @@ int16_t scoreAndSave(int16_t* bestMoves, Game* game, uint player, uint PieceToMo
 
 //... have it be odd depth
 Move iterateLegalMoves(Game game, uint player, uint depth) {
-	printf("\nLooking %d deep.\n", depth);
+	printf("\n  Looking %d deep.\n", depth);
 	if (depth > MAX_DEPTH) {
 		depth = MAX_DEPTH;
 	}
@@ -95,7 +95,7 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 	uint curPlayer = player;
 
 	
-	int16_t bestMoves[MAX_DEPTH][4] = { 0 };
+	int16_t bestMoves[MAX_DEPTH][4] = { INT16_MIN, -1,-1,-1 };
 
 	while (1) {
 		int8_t forward = 0;
@@ -479,7 +479,7 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 
 		//Additional move logic for en passanting
 		if(WeCanEnPassantInd[prevDepth] == MoveIndex[prevDepth]){
-			printf("Trying to en passant.\n");
+			//printf("Trying to en passant.\n");
 			uint pawnToTakeX = Moves[prevDepth][MoveIndex[prevDepth]][X];
 			uint pawnToTakeY= Moves[prevDepth][MoveIndex[prevDepth]][Y] - forward;
 			removePiece(&games[curDepth].player[!curPlayer], findPiecePlayer(&games[curDepth].player[!curPlayer], pawnToTakeX, pawnToTakeY));
@@ -693,26 +693,29 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 			printf("debug");
 		}*/
 
-		nodes++;
-		#ifdef PRINT_NODES_FULL
-		printf("CurNode: %u, depth %u. Move index is on %u, piece to move is on %u.\n", nodes, curDepth, MoveIndex[curDepth], PieceToMove[curDepth]);
-		#endif
+		
 
 
 		//Now, if we're at max depth
 		if (curDepth == depth) {
-			//Back up one, score what the position was, 'score and save' only saves if the score is better/worse
+			//score position as this is where we look at how we got here 
+			nodes++;
+			#ifdef PRINT_NODES_FULL
+			printf("CurNode: %u, depth %u. Move index is on %u, piece to move is on %u.\n", nodes, curDepth, MoveIndex[curDepth], PieceToMove[curDepth]);
+			#endif
+			scoreAndSave(&bestMoves[prevDepth], &games[curDepth], player, PieceToMove[0], Moves[0][MoveIndex[0]][X], Moves[0][MoveIndex[0]][Y], curPlayer == player);
+			
+			//Back up one as we are at the max depth, which was just for looking at the produced position.	
 			HadIllegalMove:;
 			curDepth--;
-			//scoreAndSave(&bestMoves[curDepth], &games[curDepth + 1], player, PieceToMove[curDepth], Moves[curDepth][MoveIndex[curDepth]][X], Moves[curDepth][MoveIndex[curDepth]][Y], curPlayer == player);
-		
 			
+			SelectNext:;
+			
+
 			//Advance the move on the current piece,
 			//If no more moves are left on this piece, go to the next piece. 
 			//If there are no more pieces, back up, then try again.
 			//If there is no more room to back up, we are done.
-			SelectNext:;
-			
 			while (1) {
 				//go to the next move on the piece
 				MoveIndex[curDepth]++;
@@ -732,8 +735,30 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 							goto Done;
 						}
 						else {
-							curDepth--;
+							//This is where we back up a depth and take the score with us. 
+							if (curDepth - 1 < 0) {
+								printf("bruh");
+								exit(0);
+							}
+							//printf("Current player, %u, depth %u, score %d, piece is %d, to %d, %d.\n\n",curPlayer, curDepth, bestMoves[curDepth][Score], bestMoves[curDepth][pieceIndex],bestMoves[curDepth][xDest], bestMoves[curDepth][yDest]);
+							if (curPlayer != player) {//save the best score out of the nodes below
+								if (bestMoves[curDepth][Score] > bestMoves[curDepth - 1][Score] || bestMoves[curDepth - 1][pieceIndex] < 0) {
+									bestMoves[curDepth - 1][Score] = bestMoves[curDepth][Score];
+									bestMoves[curDepth - 1][pieceIndex] = bestMoves[curDepth][pieceIndex];
+									bestMoves[curDepth - 1][xDest] = bestMoves[curDepth][xDest];
+									bestMoves[curDepth - 1][yDest] = bestMoves[curDepth][yDest];
+								}
+							} else {
+								if (bestMoves[curDepth][Score] < bestMoves[curDepth - 1][Score] || bestMoves[curDepth - 1][pieceIndex] < 0) {
+									bestMoves[curDepth - 1][Score] = bestMoves[curDepth][Score];
+									bestMoves[curDepth - 1][pieceIndex] = bestMoves[curDepth][pieceIndex];
+									bestMoves[curDepth - 1][xDest] = bestMoves[curDepth][xDest];
+									bestMoves[curDepth - 1][yDest] = bestMoves[curDepth][yDest];
+								}
+							}
 							curPlayer = !curPlayer;
+							curDepth--;
+							//TODO- atm this likely won't work with check/stalemate positions
 						}
 					}else {//Otherwise, we're done here because we found a new piece to roll with
 						break;
@@ -758,9 +783,13 @@ Done:;
 	double cpu_time_used = ((double)((unsigned long long)end - (unsigned long long)start)) / CLOCKS_PER_SEC;
 	double temp = (double)nodes;
 	int nps = (int)round(temp / cpu_time_used);
-	printf("Nodes: %d\nThat is %d nodes per second.\n", (int)nodes, (int)nps);
+	printf("  Nodes: %d\n  That is %d nodes per second.\n", (int)nodes, (int)nps);
 #endif
 	Move returns = { 0 };
+	returns.PieceToMove = bestMoves[0][pieceIndex];
+	returns.score = bestMoves[0][Score];
+	returns.xTo = bestMoves[0][xDest];
+	returns.yTo = bestMoves[0][yDest];
 	return(returns);
 }
 

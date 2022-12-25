@@ -1,7 +1,9 @@
 ﻿//#define DEBUG
 //#define COMPAT_MODE
 
+#define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
 
+#include <windows.h>
 
 #include "chessBase.h"
 #include "AI.h"
@@ -11,12 +13,23 @@
 #include <time.h>
 
 
+
 void flushInput(void) {
 	int c = 0;
 	while ((c = getchar()) != '\n' && c != EOF) {}
 }
 
+
 int main(void) {
+// enable ANSI sequences for windows 10:
+	HANDLE console = GetStdHandle(STD_OUTPUT_HANDLE);
+	DWORD consoleMode;
+	GetConsoleMode(console, &consoleMode);
+	consoleMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+	SetConsoleMode(console, consoleMode);
+
+
+
 	Game game = startGame();
 
 
@@ -27,87 +40,65 @@ int main(void) {
 	precacheKnightMoves();
 	end = clock();
 	cpu_time_used = ((double)((unsigned long long)end - (unsigned long long)start)) / CLOCKS_PER_SEC;
-	printf("Precache time: %f\n", cpu_time_used);
+	printf("  Precache time: %f\n", cpu_time_used);
+	uint depth = 0;
+	
 
 
-	/*int player = White;
+
+	/*printf("Enter Depth: \n");
+	depth = (uint) (getchar() - '0');
+	flushInput();
+	start = clock();
+	Move mv = iterateLegalMoves(game, White, depth);
+	printf("Move found: Piece %c, to %u,%u, rating was %d.\n", piecesSymbol[game.player[White].pieces[mv.PieceToMove].type], mv.xTo, mv.yTo, mv.score);
+	
+	end = clock();
+	cpu_time_used = ((double)((unsigned long long)end - (unsigned long long)start)) / CLOCKS_PER_SEC;
+	printf("Board Prediction time: %f\n", cpu_time_used);*/
+	
+	
+	printf("  Enter Depth: \n  ");
+	depth = (uint)(getchar() - '0');
+	printf("\n\n");
+	flushInput();
+	
 	while (1) {
-		printf("It is %d turn.\n", player);
-		printf("Enter piece to move: ");
+		printBoard(game.board);
+		printf("\n  Enter piece to move: ");
 		uint x = (uint)convCharToPos((char)getc(stdin));
 		uint y = (uint)convCharToPos((char)getc(stdin));
 		if (y == 8) {
 			break;
 		}
 		flushInput();
-		printf("Enter destination: ");
+		printf("  Enter destination: ");
 		uint xTo = (uint)convCharToPos((char)getc(stdin));
 		uint yTo = (uint)convCharToPos((char)getc(stdin));
 		flushInput();
-		Piece* piece = findPiecePlayer(&game.player[player], x, y);
+		Piece* piece = findPiecePlayer(&game.player[White], x, y);
 		if (piece == NULL) {
+			printf("Piece does not exist.");
 			continue;
+			//exit(1);
 		}
-		movePieceTaking(&game.board, piece, xTo, yTo);
+		movePieceTaking(&game, piece, xTo, yTo);
 		printBoard(game.board);
-		printf("\n");
-		printPlayer(game.player[White]);
-		printPlayer(game.player[Black]);
-		printf("\n");
-		if (player == White) {
-			player = Black;
-		}
-		else {
-			player = White;
-		}
-		
-	}*/
+		printf("\n\n\n");
+		//printPlayer(game.player[White]);
+		//printPlayer(game.player[Black]);
 
+		start = clock();
+		Move mv = iterateLegalMoves(game, Black, depth);
+		end = clock();
+		cpu_time_used = ((double)((unsigned long long)end - (unsigned long long)start)) / CLOCKS_PER_SEC;
+		printf("  Board Prediction time: %f\n", cpu_time_used);
+		printf("  Move found: Piece %c, to %u,%u, rating was %d.\n", piecesSymbol[game.player[Black].pieces[mv.PieceToMove].type], mv.xTo, mv.yTo, mv.score);
 
-
-
-
-
-
-	uint depth = 0;
-	printf("Enter Depth: \n");
-	depth = (uint) (getchar() - '0');
-	start = clock();
-	iterateLegalMoves(game, White, depth);
-	/*Piece* test = findPiecePlayer(&game.player[White], 4, 1);
-	movePieceTaking(&game, test, 4, 2);
-
-	test = findPiecePlayer(&game.player[Black], 7, 6);
-	movePieceTaking(&game, test, 7, 4);
-	printBoard(game.board);
-
-	test = findPiecePlayer(&game.player[White], 3, 0);
-	movePieceTaking(&game, test, 7, 4);
-	printBoard(game.board);
-
-	test = findPiecePlayer(&game.player[Black], 7, 7);
-	movePieceTaking(&game, test, 7, 6);
-	printBoard(game.board);
-	printPlayer(game.player[White]);
-	printPlayer(game.player[Black]);
-
-	test = findPiecePlayer(&game.player[White], 7, 4);
-	movePieceTaking(&game, test, 7, 6);
-	printBoard(game.board);
-	printPlayer(game.player[White]);
-	printPlayer(game.player[Black]);*/
-	
-	end = clock();
-	cpu_time_used = ((double)((unsigned long long)end - (unsigned long long)start)) / CLOCKS_PER_SEC;
-	printf("Board Prediction time: %f\n", cpu_time_used);
+		movePieceTaking(&game, &game.player[Black].pieces[mv.PieceToMove], mv.xTo, mv.yTo);
+	}
 	
 
-
-
-	
-	
-	//while (1) {
-	//	printf("White's turn");
-	//}
-
+	depth = (uint)(getchar() - '0');
+	return(depth);
 }
