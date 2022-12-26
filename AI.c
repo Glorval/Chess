@@ -82,6 +82,12 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 	//how many moves do we have at the depth
 	uint MoveCount[MAX_DEPTH] = { 0 };
 
+	//Have we successfully made a legal move at this depth? Used to determine if a position is a checkmate.
+	//0 = None, 1 = found. If no legal move is found and it's time to back up, there needs to be a check  run to see if
+	//the starting position is in check or not. If it is, that means it's checkmate (in check, no legal moves)
+	//If not, stalemate (worth -1000 [STALEMATE_VAL], but is not as bad as loss)
+	uint FoundLegalMove[MAX_DEPTH] = { 0 };
+
 	//The x/y of a pawn that just moved two foward. 
 	//How this works is that on depth A, if a pawn moves two forward, depth A+1 will have the spot it moved to written in to check against.
 	//Setting it to 0 should be safe because that's not a place that can physically be en passant'd on
@@ -681,6 +687,7 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 		}
 		
 		//if we make it here, it was a legal move
+		FoundLegalMove[prevDepth] = LEGAL_MOVE;
 
 		//Now, if we just did a double mover as a pawn, as indicated by the index of the move being the same as the move we're on, set our new position as the thing
 		if (EnPassantMoveInd[prevDepth] == MoveIndex[prevDepth]) {
@@ -728,34 +735,235 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 					PieceToMove[curDepth]++;
 					WeCanEnPassantInd[curDepth] = MAX_MOVES_PER_PIECE + 1;
 					EnPassantMoveInd[curDepth] = MAX_MOVES_PER_PIECE + 1;
-					//if there are no more pieces left at this depth, back up one more.
-					//HUGE NOTE, used to check !curPlayer 
+
+					//if there are no more pieces left at this depth, back up one more. 
 					if (PieceToMove[curDepth] >= games[curDepth].player[curPlayer].pieceC) {
-						if (curDepth - 1 == -1) {//if we're out of depth, be done, as the only way to hit 'out of depth' at this point is to have no more pieces left to check
+						if (curDepth - 1 < 0) {//if we're out of depth, be done, as the only way to hit 'out of depth' at this point is to have no more pieces left to check
 							goto Done;
 						}
 						else {
 							//This is where we back up a depth and take the score with us. 
-							if (curDepth - 1 < 0) {
+							/*if (curDepth - 1 < 0) {//not needed as impossible to reach while true if everything is programmed right.
 								printf("bruh");
 								exit(0);
-							}
-							//printf("Current player, %u, depth %u, score %d, piece is %d, to %d, %d.\n\n",curPlayer, curDepth, bestMoves[curDepth][Score], bestMoves[curDepth][pieceIndex],bestMoves[curDepth][xDest], bestMoves[curDepth][yDest]);
-							if (curPlayer != player) {//save the best score out of the nodes below
-								if (bestMoves[curDepth][Score] > bestMoves[curDepth - 1][Score] || bestMoves[curDepth - 1][pieceIndex] < 0) {
-									bestMoves[curDepth - 1][Score] = bestMoves[curDepth][Score];
-									bestMoves[curDepth - 1][pieceIndex] = bestMoves[curDepth][pieceIndex];
-									bestMoves[curDepth - 1][xDest] = bestMoves[curDepth][xDest];
-									bestMoves[curDepth - 1][yDest] = bestMoves[curDepth][yDest];
-								}
+							}*/
+
+							if (curPlayer == White) {
+								forward = 1;
+								pawnBaseY = 1;
 							} else {
-								if (bestMoves[curDepth][Score] < bestMoves[curDepth - 1][Score] || bestMoves[curDepth - 1][pieceIndex] < 0) {
-									bestMoves[curDepth - 1][Score] = bestMoves[curDepth][Score];
-									bestMoves[curDepth - 1][pieceIndex] = bestMoves[curDepth][pieceIndex];
-									bestMoves[curDepth - 1][xDest] = bestMoves[curDepth][xDest];
-									bestMoves[curDepth - 1][yDest] = bestMoves[curDepth][yDest];
+								forward = -1;
+								pawnBaseY = 6;
+							}
+
+							//If no moves were found during this search, figure out if it's a stalemate or check and assign accordingly.
+							if (FoundLegalMove[curDepth] == NO_MOVE) {
+								//check to see if we're in check before moving
+								const uint ourXHere = games[curDepth].player[curPlayer].pieces[0].x;
+								const uint ourYHere = games[curDepth].player[curPlayer].pieces[0].y;
+								for (int cP = 0; cP < games[curDepth].player[!curPlayer].pieceC; cP++) {
+									curEnP = &games[curDepth].player[!curPlayer].pieces[cP];
+									//Todo, make it check against the enemy king as well for this one is different
+
+									if (curEnP->type == Rook) {
+										SecondIllegalMoveCheckLinear:;
+										//if on the same vertical
+										if (curEnP->x == ourXHere) {
+											if (curEnP->y > ourYHere) {//and above
+												//check if it can come down to us and whack us
+												for (uint cY = curEnP->y - 1; cY > ourYHere; cY--) {
+													if (games[curDepth].board.p[ourXHere][cY][Type]) {
+														goto EndOfSecondIllegalMoveLoop;//blocker, we need to continue the outer loop
+													}
+													goto IsInCheck;
+												}
+											} else {
+												//check if it can come up to us and whack us
+												for (uint cY = curEnP->y + 1; cY < ourYHere; cY++) {
+													if (games[curDepth].board.p[ourYHere][cY][Type]) {
+														goto EndOfSecondIllegalMoveLoop;//blocker, we need to continue the outer loop
+													}
+													goto IsInCheck;
+												}
+											}
+										}
+
+										//if on the same horizontal
+										if (curEnP->y == ourYHere) {
+											if (curEnP->x > ourYHere) {//and right
+												//check if it can come left to us and whack us
+												for (uint cX = curEnP->x - 1; cX > ourYHere; cX--) {
+													if (games[curDepth].board.p[cX][ourYHere][Type]) {
+														goto EndOfSecondIllegalMoveLoop;//blocker, we need to continue the outer loop
+													}
+												}
+												goto IsInCheck;
+											} else {
+												//check if it can come right to us and whack us
+												for (uint cX = curEnP->x + 1; cX < ourYHere; cX++) {
+													if (games[curDepth].board.p[cX][ourYHere][Type]) {
+														goto EndOfSecondIllegalMoveLoop;//blocker, we need to continue the outer loop
+													}
+												}
+												goto IsInCheck;
+											}
+										}
+									} 
+									else if (curEnP->type == Bishop) {
+										SecondIllegalMoveCheckDiagonal:;
+
+										//same positive slope diagonal check
+										uint xDist = ourXHere - curEnP->x;
+										uint yDist = ourYHere - curEnP->y;
+										if (xDist == yDist) {
+											//if overflowed, it's upper right because king has smol num and bishop big
+											if (xDist > BoardDim) {
+												//So, check if the bishop can slide in from the upper right lowering the distance every time,
+												//also starts with the distance lowered one because we shouldn't check the square the bishop is on for an interruption
+												uint curX = curEnP->x - 1;
+												uint curY = curEnP->y - 1;
+												while (curX > ourXHere) {
+													//If there is a blocker,
+													if (games[curDepth].board.p[curX][curY][Type]) {
+														//we don't need to keep checking and can just move on. This piece still no see king
+														goto EndOfSecondIllegalMoveLoop;
+													}
+													curX--;
+													curY--;
+												}
+												//if no blockers are found, it is an illegal move.
+												goto IsInCheck;
+											} else {//Otherwise, it's to the bottom left as king big on both and bishop smol
+												//So, check if the bishop can slide in from the lower left
+												uint curX = curEnP->x + 1;
+												uint curY = curEnP->y + 1;
+												while (curX < ourXHere) {
+													//If there is a blocker,
+													if (games[curDepth].board.p[curX][curY][Type]) {
+														//we don't need to keep checking and can just move on. This piece still no see king
+														goto EndOfSecondIllegalMoveLoop;
+													}
+													curX++;
+													curY++;
+												}
+												//if no blockers are found, it is an illegal move.
+												goto IsInCheck;
+											}
+										}
+
+
+										xDist = ourXHere - curEnP->x;
+										yDist = curEnP->y - ourYHere;
+										if (xDist == yDist) {
+											//if overflowed, it's lower right
+											if (xDist > BoardDim) {
+												uint curX = curEnP->x - 1;
+												uint curY = curEnP->y + 1;
+												while (curX > ourXHere) {
+													//If there is a blocker,
+													if (games[curDepth].board.p[curX][curY][Type]) {
+														//we don't need to keep checking and can just move on. This piece still no see king
+														goto EndOfSecondIllegalMoveLoop;
+													}
+													curX--;
+													curY++;
+												}
+												//if no blockers are found, it is an illegal move.
+												goto IsInCheck;
+											} else {//enemy bishop upper left
+												uint curX = curEnP->x + 1;
+												uint curY = curEnP->y - 1;
+												while (curX < ourXHere) {
+													//If there is a blocker,
+													if (games[curDepth].board.p[curX][curY][Type]) {
+														//we don't need to keep checking and can just move on. This piece still no see king
+														goto EndOfSecondIllegalMoveLoop;
+													}
+													curX++;
+													curY--;
+												}
+												//if no blockers are found, it is an illegal move.
+												goto IsInCheck;
+											}
+
+										}
+										continue;
+									} 
+									else if (curEnP->type == Pawn) {
+										//If the pawn is one in front of us, we could be threatened
+										if (curEnP->y - forward == ourYHere) {
+											//if one in front and one to the side, that's a diagonal to us
+											if (curEnP->x + 1 == ourXHere || curEnP->x - 1 == ourXHere) {
+												//if no blockers are found, it is an illegal move.
+												goto IsInCheck;
+											}
+										}
+										continue;
+									} 
+									else if (curEnP->type == Queen) {
+										goto SecondIllegalMoveCheckLinear;
+									}
+									if (curEnP->type == Queen) {
+										goto SecondIllegalMoveCheckDiagonal;
+									}
+
+									EndOfSecondIllegalMoveLoop:;
+								}
+								
+								//If we make it here, we were not in check and it's a stalemate
+								
+								//If the current player is us and in stalemate (no legal moves, not in check), this is meh
+								if (curPlayer == player) {
+									bestMoves[curDepth - 1][Score] = STALEMATE_VAL;
+									bestMoves[curDepth - 1][pieceIndex] = PieceToMove[0];
+									bestMoves[curDepth - 1][xDest] = Moves[0][MoveIndex[0]][X];
+									bestMoves[curDepth - 1][yDest] = Moves[0][MoveIndex[0]][Y];
+								} else {//Otherwise, the opponent is in stalemate, this is still meh
+									bestMoves[curDepth - 1][Score] = STALEMATE_VAL;
+									bestMoves[curDepth - 1][pieceIndex] = PieceToMove[0];
+									bestMoves[curDepth - 1][xDest] = Moves[0][MoveIndex[0]][X];
+									bestMoves[curDepth - 1][yDest] = Moves[0][MoveIndex[0]][Y];
+								}
+								printf("Is in stalemate.");
+								goto EndOfBackup;
+
+								IsInCheck:;
+								printf("Is in checkmate\n");
+								//If the current player in checkmate (check with no legal moves), this is the big bad as it's a forced checkmate.
+								if (curPlayer == player) {
+									bestMoves[curDepth - 1][Score] = CHECKMATE_VAL;
+									bestMoves[curDepth - 1][pieceIndex] = PieceToMove[0];
+									bestMoves[curDepth - 1][xDest] = Moves[0][MoveIndex[0]][X];
+									bestMoves[curDepth - 1][yDest] = Moves[0][MoveIndex[0]][Y];
+								} else {//Otherwise, hurrah for a checkmate move.
+									bestMoves[curDepth - 1][Score] = -CHECKMATE_VAL;
+									bestMoves[curDepth - 1][pieceIndex] = PieceToMove[0];
+									bestMoves[curDepth - 1][xDest] = Moves[0][MoveIndex[0]][X];
+									bestMoves[curDepth - 1][yDest] = Moves[0][MoveIndex[0]][Y];
+								}
+								
+								goto EndOfBackup;
+
+							}else{
+								//printf("Current player, %u, depth %u, score %d, piece is %d, to %d, %d.\n\n",curPlayer, curDepth, bestMoves[curDepth][Score], bestMoves[curDepth][pieceIndex],bestMoves[curDepth][xDest], bestMoves[curDepth][yDest]);
+								if (curPlayer != player) {//save the best score out of the nodes below
+									if (bestMoves[curDepth][Score] > bestMoves[curDepth - 1][Score] || bestMoves[curDepth - 1][pieceIndex] < 0) {
+										bestMoves[curDepth - 1][Score] = bestMoves[curDepth][Score];
+										bestMoves[curDepth - 1][pieceIndex] = bestMoves[curDepth][pieceIndex];
+										bestMoves[curDepth - 1][xDest] = bestMoves[curDepth][xDest];
+										bestMoves[curDepth - 1][yDest] = bestMoves[curDepth][yDest];
+									}
+								} else {
+									if (bestMoves[curDepth][Score] < bestMoves[curDepth - 1][Score] || bestMoves[curDepth - 1][pieceIndex] < 0) {
+										bestMoves[curDepth - 1][Score] = bestMoves[curDepth][Score];
+										bestMoves[curDepth - 1][pieceIndex] = bestMoves[curDepth][pieceIndex];
+										bestMoves[curDepth - 1][xDest] = bestMoves[curDepth][xDest];
+										bestMoves[curDepth - 1][yDest] = bestMoves[curDepth][yDest];
+									}
 								}
 							}
+
+							EndOfBackup:;
 							curPlayer = !curPlayer;
 							curDepth--;
 							//TODO- atm this likely won't work with check/stalemate positions

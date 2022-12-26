@@ -12,13 +12,17 @@
 
 #define printOutTheMove printf("\n\nIllegal move from depth: %d, %d\n", curDepth - 1, curDepth);printBoard(games[curDepth - 1].board);printBoard(games[curDepth].board);printf("^ Illegal move, ignoring ^\n\n\n");
 
+#define LEGAL_MOVE 1
+#define NO_MOVE 0
 
 //enum pieces {Empty, King, Queen, Rook, Bishop, Knight, Pawn};
-const static int16_t pieceValOurAgr[] = { 0, 200, 12, 5, 3,3,1 };
+const static int16_t pieceValOurAgr[] = { 0, 2000, 12, 5, 3,3,1 };
 
-const static int16_t pieceValOppAgr[] = { 0, 200, 12, 7, 5, 4, 2 };
+const static int16_t pieceValOppAgr[] = { 0, 2000, 12, 7, 5, 4, 2 };
 
-const static int16_t fairScore[] = { 0, 75, 8, 5, 4, 3, 1 };
+const static int16_t fairScore[] = { 0, 2000, 8, 5, 4, 3, 1 };
+#define STALEMATE_VAL -1000
+#define CHECKMATE_VAL 5000;
 
 struct move {
 	uint PieceToMove;//index in player list
