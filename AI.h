@@ -10,6 +10,9 @@
 //#define PRINT_NODES_FULL
 //#define PRINT_ILLEGAL_MOVE_FOUND
 
+//V also prints stalemate V
+//#define PRINT_CHECKMATE_DEBUG_INFO
+
 #define printOutTheMove printf("\n\nIllegal move from depth: %d, %d\n", curDepth - 1, curDepth);printBoard(games[curDepth - 1].board);printBoard(games[curDepth].board);printf("^ Illegal move, ignoring ^\n\n\n");
 
 #define LEGAL_MOVE 1
@@ -27,7 +30,7 @@ const static int16_t fairScore[] = { 0, 2000, 8, 5, 4, 3, 1 };
 struct move {
 	uint PieceToMove;//index in player list
 	uint xTo, yTo;
-	int8_t score;
+	int16_t score;
 };
 typedef struct move Move;
 

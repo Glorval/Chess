@@ -471,6 +471,7 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 			EnPassantKnowledge[curDepth][Y] = 0;
 			EnPassantMoveInd[curDepth] = MAX_MOVES_PER_PIECE + 1;
 			WeCanEnPassantInd[curDepth] = MAX_MOVES_PER_PIECE + 1;
+			FoundLegalMove[curDepth] = 0;
 		}
 		
 		 
@@ -495,7 +496,7 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 
 
 		#ifdef PRINT_BOARDS_SOLVING
-		printf("\n\nDepth: %d. Current node: %u\n", curDepth, nodes);
+		printf("\n\nDepth: %d. Current node: %u. Legal move found yet: %u\n", curDepth, nodes, FoundLegalMove[prevDepth]);
 		printBoard(games[curDepth].board);
 		//Sleep(100);
 		#endif
@@ -742,11 +743,7 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 							goto Done;
 						}
 						else {
-							//This is where we back up a depth and take the score with us. 
-							/*if (curDepth - 1 < 0) {//not needed as impossible to reach while true if everything is programmed right.
-								printf("bruh");
-								exit(0);
-							}*/
+							//This is where we back up a depth to change move/pieces on the previous depth and take the score with us. 
 
 							if (curPlayer == White) {
 								forward = 1;
@@ -758,70 +755,79 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 
 							//If no moves were found during this search, figure out if it's a stalemate or check and assign accordingly.
 							if (FoundLegalMove[curDepth] == NO_MOVE) {
+								#ifdef PRINT_CHECKMATE_DEBUG_INFO
+								printf("No legal move found at depth %u. Checking if position is in check for %u.\n", curDepth, !curPlayer);
+								printBoard(games[curDepth].board);
+								#endif
 								//check to see if we're in check before moving
 								const uint ourXHere = games[curDepth].player[curPlayer].pieces[0].x;
 								const uint ourYHere = games[curDepth].player[curPlayer].pieces[0].y;
+								Piece* enPiece = NULL;
 								for (int cP = 0; cP < games[curDepth].player[!curPlayer].pieceC; cP++) {
-									curEnP = &games[curDepth].player[!curPlayer].pieces[cP];
+									enPiece = &games[curDepth].player[!curPlayer].pieces[cP];
 									//Todo, make it check against the enemy king as well for this one is different
 
-									if (curEnP->type == Rook) {
+									if (enPiece->type == Rook) {
 										SecondIllegalMoveCheckLinear:;
 										//if on the same vertical
-										if (curEnP->x == ourXHere) {
-											if (curEnP->y > ourYHere) {//and above
+										if (enPiece->x == ourXHere) {
+											if (enPiece->y > ourYHere) {//and above
 												//check if it can come down to us and whack us
-												for (uint cY = curEnP->y - 1; cY > ourYHere; cY--) {
+												for (uint cY = enPiece->y - 1; cY > ourYHere; cY--) {
 													if (games[curDepth].board.p[ourXHere][cY][Type]) {
 														goto EndOfSecondIllegalMoveLoop;//blocker, we need to continue the outer loop
 													}
-													goto IsInCheck;
 												}
+												//No blocker found, check
+												goto IsInCheck;
 											} else {
 												//check if it can come up to us and whack us
-												for (uint cY = curEnP->y + 1; cY < ourYHere; cY++) {
-													if (games[curDepth].board.p[ourYHere][cY][Type]) {
+												for (uint cY = enPiece->y + 1; cY < ourYHere; cY++) {
+													if (games[curDepth].board.p[ourXHere][cY][Type]) {
 														goto EndOfSecondIllegalMoveLoop;//blocker, we need to continue the outer loop
 													}
-													goto IsInCheck;
 												}
+												//No blocker found, check
+												goto IsInCheck;
 											}
 										}
 
 										//if on the same horizontal
-										if (curEnP->y == ourYHere) {
-											if (curEnP->x > ourYHere) {//and right
+										if (enPiece->y == ourYHere) {
+											if (enPiece->x > ourXHere) {//and right
 												//check if it can come left to us and whack us
-												for (uint cX = curEnP->x - 1; cX > ourYHere; cX--) {
+												for (uint cX = enPiece->x - 1; cX > ourXHere; cX--) {
 													if (games[curDepth].board.p[cX][ourYHere][Type]) {
 														goto EndOfSecondIllegalMoveLoop;//blocker, we need to continue the outer loop
 													}
 												}
+												//No blocker found, check
 												goto IsInCheck;
 											} else {
 												//check if it can come right to us and whack us
-												for (uint cX = curEnP->x + 1; cX < ourYHere; cX++) {
+												for (uint cX = enPiece->x + 1; cX < ourXHere; cX++) {
 													if (games[curDepth].board.p[cX][ourYHere][Type]) {
 														goto EndOfSecondIllegalMoveLoop;//blocker, we need to continue the outer loop
 													}
 												}
+												//No blocker found, check
 												goto IsInCheck;
 											}
 										}
 									} 
-									else if (curEnP->type == Bishop) {
+									else if (enPiece->type == Bishop) {
 										SecondIllegalMoveCheckDiagonal:;
 
 										//same positive slope diagonal check
-										uint xDist = ourXHere - curEnP->x;
-										uint yDist = ourYHere - curEnP->y;
+										uint xDist = ourXHere - enPiece->x;
+										uint yDist = ourYHere - enPiece->y;
 										if (xDist == yDist) {
 											//if overflowed, it's upper right because king has smol num and bishop big
 											if (xDist > BoardDim) {
 												//So, check if the bishop can slide in from the upper right lowering the distance every time,
 												//also starts with the distance lowered one because we shouldn't check the square the bishop is on for an interruption
-												uint curX = curEnP->x - 1;
-												uint curY = curEnP->y - 1;
+												uint curX = enPiece->x - 1;
+												uint curY = enPiece->y - 1;
 												while (curX > ourXHere) {
 													//If there is a blocker,
 													if (games[curDepth].board.p[curX][curY][Type]) {
@@ -835,8 +841,8 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 												goto IsInCheck;
 											} else {//Otherwise, it's to the bottom left as king big on both and bishop smol
 												//So, check if the bishop can slide in from the lower left
-												uint curX = curEnP->x + 1;
-												uint curY = curEnP->y + 1;
+												uint curX = enPiece->x + 1;
+												uint curY = enPiece->y + 1;
 												while (curX < ourXHere) {
 													//If there is a blocker,
 													if (games[curDepth].board.p[curX][curY][Type]) {
@@ -852,13 +858,13 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 										}
 
 
-										xDist = ourXHere - curEnP->x;
-										yDist = curEnP->y - ourYHere;
+										xDist = ourXHere - enPiece->x;
+										yDist = enPiece->y - ourYHere;
 										if (xDist == yDist) {
 											//if overflowed, it's lower right
 											if (xDist > BoardDim) {
-												uint curX = curEnP->x - 1;
-												uint curY = curEnP->y + 1;
+												uint curX = enPiece->x - 1;
+												uint curY = enPiece->y + 1;
 												while (curX > ourXHere) {
 													//If there is a blocker,
 													if (games[curDepth].board.p[curX][curY][Type]) {
@@ -871,8 +877,8 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 												//if no blockers are found, it is an illegal move.
 												goto IsInCheck;
 											} else {//enemy bishop upper left
-												uint curX = curEnP->x + 1;
-												uint curY = curEnP->y - 1;
+												uint curX = enPiece->x + 1;
+												uint curY = enPiece->y - 1;
 												while (curX < ourXHere) {
 													//If there is a blocker,
 													if (games[curDepth].board.p[curX][curY][Type]) {
@@ -889,21 +895,21 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 										}
 										continue;
 									} 
-									else if (curEnP->type == Pawn) {
+									else if (enPiece->type == Pawn) {
 										//If the pawn is one in front of us, we could be threatened
-										if (curEnP->y - forward == ourYHere) {
+										if (enPiece->y - forward == ourYHere) {
 											//if one in front and one to the side, that's a diagonal to us
-											if (curEnP->x + 1 == ourXHere || curEnP->x - 1 == ourXHere) {
+											if (enPiece->x + 1 == ourXHere || enPiece->x - 1 == ourXHere) {
 												//if no blockers are found, it is an illegal move.
 												goto IsInCheck;
 											}
 										}
 										continue;
 									} 
-									else if (curEnP->type == Queen) {
+									else if (enPiece->type == Queen) {
 										goto SecondIllegalMoveCheckLinear;
 									}
-									if (curEnP->type == Queen) {
+									if (enPiece->type == Queen) {
 										goto SecondIllegalMoveCheckDiagonal;
 									}
 
@@ -914,29 +920,42 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 								
 								//If the current player is us and in stalemate (no legal moves, not in check), this is meh
 								if (curPlayer == player) {
+									#ifdef PRINT_CHECKMATE_DEBUG_INFO
+									printf("Trying to save a stalemate on us at depth %u\n", curDepth);
+									printf("\n\n\n");
+									#endif
 									bestMoves[curDepth - 1][Score] = STALEMATE_VAL;
 									bestMoves[curDepth - 1][pieceIndex] = PieceToMove[0];
 									bestMoves[curDepth - 1][xDest] = Moves[0][MoveIndex[0]][X];
 									bestMoves[curDepth - 1][yDest] = Moves[0][MoveIndex[0]][Y];
 								} else {//Otherwise, the opponent is in stalemate, this is still meh
+									#ifdef PRINT_CHECKMATE_DEBUG_INFO
+									printf("Trying to save a stalemate on them at depth %u\n", curDepth);
+									printf("\n\n\n");
+									#endif
 									bestMoves[curDepth - 1][Score] = STALEMATE_VAL;
 									bestMoves[curDepth - 1][pieceIndex] = PieceToMove[0];
 									bestMoves[curDepth - 1][xDest] = Moves[0][MoveIndex[0]][X];
 									bestMoves[curDepth - 1][yDest] = Moves[0][MoveIndex[0]][Y];
 								}
-								printf("Is in stalemate.");
 								goto EndOfBackup;
 
 								IsInCheck:;
-								printf("Is in checkmate\n");
+								//printf("Is in checkmate\n");
 								//If the current player in checkmate (check with no legal moves), this is the big bad as it's a forced checkmate.
 								if (curPlayer == player) {
-									bestMoves[curDepth - 1][Score] = CHECKMATE_VAL;
+									#ifdef PRINT_CHECKMATE_DEBUG_INFO
+									printf("Trying to save a bad checkmate at depth %u\n", curDepth);
+									#endif
+									bestMoves[curDepth - 1][Score] = -CHECKMATE_VAL;
 									bestMoves[curDepth - 1][pieceIndex] = PieceToMove[0];
 									bestMoves[curDepth - 1][xDest] = Moves[0][MoveIndex[0]][X];
 									bestMoves[curDepth - 1][yDest] = Moves[0][MoveIndex[0]][Y];
 								} else {//Otherwise, hurrah for a checkmate move.
-									bestMoves[curDepth - 1][Score] = -CHECKMATE_VAL;
+									#ifdef PRINT_CHECKMATE_DEBUG_INFO
+									printf("Trying to save a good checkmate at depth %u\n", curDepth);
+									#endif
+									bestMoves[curDepth - 1][Score] = CHECKMATE_VAL;
 									bestMoves[curDepth - 1][pieceIndex] = PieceToMove[0];
 									bestMoves[curDepth - 1][xDest] = Moves[0][MoveIndex[0]][X];
 									bestMoves[curDepth - 1][yDest] = Moves[0][MoveIndex[0]][Y];
@@ -944,7 +963,8 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 								
 								goto EndOfBackup;
 
-							}else{
+							}
+							else{
 								//printf("Current player, %u, depth %u, score %d, piece is %d, to %d, %d.\n\n",curPlayer, curDepth, bestMoves[curDepth][Score], bestMoves[curDepth][pieceIndex],bestMoves[curDepth][xDest], bestMoves[curDepth][yDest]);
 								if (curPlayer != player) {//save the best score out of the nodes below
 									if (bestMoves[curDepth][Score] > bestMoves[curDepth - 1][Score] || bestMoves[curDepth - 1][pieceIndex] < 0) {
@@ -968,10 +988,12 @@ Move iterateLegalMoves(Game game, uint player, uint depth) {
 							curDepth--;
 							//TODO- atm this likely won't work with check/stalemate positions
 						}
-					}else {//Otherwise, we're done here because we found a new piece to roll with
+					}
+					else {//Otherwise, we're done here because we found a new piece to roll with
 						break;
 					}
-				}else {//Otherwise, we're done here because we found a move on our current piece to roll with
+				}
+				else {//Otherwise, we're done here because we found a move on our current piece to roll with
 					break;
 				}
 			}
