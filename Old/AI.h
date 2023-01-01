@@ -1,6 +1,7 @@
 #include "chessBase.h"
 #define MAX_DEPTH 16
 #define MAX_MOVES_PER_PIECE 27
+#define MAX_MOVES_PER_PLAYER 218//saw it online as max possible moves in any position
 
 //#define gotoxy(x, y) printf("\033[%d;%dH", (y), (x))
 

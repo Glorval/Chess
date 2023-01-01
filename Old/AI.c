@@ -53,6 +53,350 @@ void scoreAndSave(int16_t* bestMoves, Game* game, uint player, uint PieceToMove,
 }
 
 
+//Notably different than normal iterate moves, this applies some heuristics to ties. 
+//Logic is that we run through every piece 
+/*Move multithreadedIterateLegalMoves(Game game, uint player, uint depth) {
+	Move possibleMoves[MAX_MOVES_PER_PLAYER] = {0};
+	uint bestMove = 0;//index of above
+	uint bestMoveType = 0;//Piece of the best current move, is used with heuristics
+
+	int8_t forward = 0;
+	uint pawnBaseY = 0;
+	Piece givenPiece;
+	//select piece to move and set forward for pawns
+	if (player == White) {
+		forward = 1;
+		pawnBaseY = 1;
+	} else {
+		forward = -1;
+		pawnBaseY = 6;
+	}
+
+
+
+
+	//run through all the types, each one has internal code to handle move gen
+	if (givenPiece.type == Pawn) {
+		//legal pawn moves are forward 2 if on base, forward 1 otherwise, capture forward diagonally 
+
+		//one ahead
+		int8_t tempX = givenPiece.x;
+		int8_t tempY = givenPiece.y + forward;
+		if (games[curDepth].board.p[tempX][tempY][Type] == Empty) {
+			Moves[curDepth][MoveCount[curDepth]][0] = tempX;
+			Moves[curDepth][MoveCount[curDepth]][1] = tempY;
+			MoveCount[curDepth]++;
+
+			//if we're on our start and can try two ahead
+			if (givenPiece.y == pawnBaseY) {
+				tempY += forward;
+				//two ahead
+				if (games[curDepth].board.p[tempX][tempY][Type] == Empty) {
+					Moves[curDepth][MoveCount[curDepth]][0] = tempX;
+					Moves[curDepth][MoveCount[curDepth]][1] = tempY;
+					EnPassantMoveInd[curDepth] = MoveCount[curDepth];//Save this  two ahead move's index such that later we can set the en passant stuff
+
+					MoveCount[curDepth]++;
+				}
+			}
+		}
+
+		//checking for captures
+		tempY = givenPiece.y + forward;
+		tempX++;
+		if (tempX < BoardDim && tempY < BoardDim && tempY > 0) {
+			if (games[curDepth].board.p[tempX][tempY][Owner] == !curPlayer) {
+				Moves[curDepth][MoveCount[curDepth]][0] = tempX;
+				Moves[curDepth][MoveCount[curDepth]][1] = tempY;
+				MoveCount[curDepth]++;
+			}
+		}
+
+		tempX -= 2;
+		if (tempX > 0 && tempY < BoardDim && tempY > 0) {
+			if (games[curDepth].board.p[tempX][tempY][Owner] == !curPlayer) {
+				Moves[curDepth][MoveCount[curDepth]][0] = tempX;
+				Moves[curDepth][MoveCount[curDepth]][1] = tempY;
+				MoveCount[curDepth]++;
+			}
+		}
+
+		//now check to see if we can en passant, 
+		//it needs an enemy pawn to move two forward and end up next to us for it to work.
+		//first see if we're on the right Y area
+		if (givenPiece.y == EnPassantKnowledge[curDepth][Y]) {
+			//now see if we are one left of it
+			if (givenPiece.x + 1 == EnPassantKnowledge[curDepth][X]) {
+				Moves[curDepth][MoveCount[curDepth]][0] = givenPiece.x + 1;
+				Moves[curDepth][MoveCount[curDepth]][1] = givenPiece.y + forward;
+				WeCanEnPassantInd[curDepth] = MoveCount[curDepth];
+				MoveCount[curDepth]++;
+			}
+
+			//now see if we are one right of it
+			if (givenPiece.x - 1 == EnPassantKnowledge[curDepth][X]) {
+				Moves[curDepth][MoveCount[curDepth]][0] = givenPiece.x - 1;
+				Moves[curDepth][MoveCount[curDepth]][1] = givenPiece.y + forward;
+				WeCanEnPassantInd[curDepth] = MoveCount[curDepth];
+				MoveCount[curDepth]++;
+			}
+		}
+
+	} 
+	else if (givenPiece.type == Rook) {
+		LinearMovementCalc:;
+		int8_t baseY = givenPiece.y;
+		//go right adding moves until we hit a piece, if enemy piece save it too
+		int8_t cX = givenPiece.x + 1;
+		while (cX < BoardDim) {
+			if (games[curDepth].board.p[cX][baseY][Owner] == curPlayer) {
+				break;
+			} else if (games[curDepth].board.p[cX][baseY][Owner] == !curPlayer) {
+				Moves[curDepth][MoveCount[curDepth]][X] = cX;
+				Moves[curDepth][MoveCount[curDepth]][Y] = baseY;
+				MoveCount[curDepth]++;
+				break;
+			}
+			Moves[curDepth][MoveCount[curDepth]][X] = cX;
+			Moves[curDepth][MoveCount[curDepth]][Y] = baseY;
+			MoveCount[curDepth]++;
+			cX++;
+		}
+
+		//Do the same but left
+		cX = givenPiece.x - 1;
+		while (cX >= 0) {
+			if (games[curDepth].board.p[cX][baseY][Owner] == curPlayer) {
+				break;
+			} else if (games[curDepth].board.p[cX][baseY][Owner] == !curPlayer) {
+				Moves[curDepth][MoveCount[curDepth]][X] = cX;
+				Moves[curDepth][MoveCount[curDepth]][Y] = baseY;
+				MoveCount[curDepth]++;
+				break;
+			}
+			Moves[curDepth][MoveCount[curDepth]][X] = cX;
+			Moves[curDepth][MoveCount[curDepth]][Y] = baseY;
+			MoveCount[curDepth]++;
+			cX--;
+		}
+
+		//now up
+		baseY = givenPiece.y + 1;
+		cX = givenPiece.x;
+		while (baseY < BoardDim) {
+			if (games[curDepth].board.p[cX][baseY][Owner] == curPlayer) {
+				break;
+			} else if (games[curDepth].board.p[cX][baseY][Owner] == !curPlayer) {
+				Moves[curDepth][MoveCount[curDepth]][X] = cX;
+				Moves[curDepth][MoveCount[curDepth]][Y] = baseY;
+				MoveCount[curDepth]++;
+				break;
+			}
+			Moves[curDepth][MoveCount[curDepth]][X] = cX;
+			Moves[curDepth][MoveCount[curDepth]][Y] = baseY;
+			MoveCount[curDepth]++;
+			baseY++;
+		}
+
+		//now down
+		baseY = givenPiece.y - 1;
+		cX = givenPiece.x;
+		while (baseY >= 0) {
+			if (games[curDepth].board.p[cX][baseY][Owner] == curPlayer) {
+				break;
+			} else if (games[curDepth].board.p[cX][baseY][Owner] == !curPlayer) {
+				Moves[curDepth][MoveCount[curDepth]][X] = cX;
+				Moves[curDepth][MoveCount[curDepth]][Y] = baseY;
+				MoveCount[curDepth]++;
+				break;
+			}
+			Moves[curDepth][MoveCount[curDepth]][X] = cX;
+			Moves[curDepth][MoveCount[curDepth]][Y] = baseY;
+			MoveCount[curDepth]++;
+			baseY--;
+		}
+
+	} 
+	else if (givenPiece.type == Knight) {
+		//Optimization, instead of copying over, have checks on the stuff later to see if we're moving a knight (cause it precached)?
+		//and rely more on the current index we store than this.
+		MoveCount[curDepth] = AllLegalMoves[givenPiece.x][givenPiece.y].moveC;
+		uint cLegalMove = 0;
+		uint toX = 0;
+		uint toY = 0;
+		for (int cM = 0; cM < AllLegalMoves[givenPiece.x][givenPiece.y].moveC; cM++) {
+			toX = AllLegalMoves[givenPiece.x][givenPiece.y].toX[cM];
+			toY = AllLegalMoves[givenPiece.x][givenPiece.y].toY[cM];
+			Moves[curDepth][cLegalMove][X] = toX;
+			Moves[curDepth][cLegalMove][Y] = toY;
+			MoveCount[curDepth] -= games[curDepth].board.p[toX][toY][Owner] == curPlayer;
+			//cM += games[curDepth].board.p[toX][toY][Owner] != curPlayer;
+			cLegalMove += games[curDepth].board.p[toX][toY][Owner] != curPlayer;
+		}
+
+	} 
+	else if (givenPiece.type == Bishop) {
+		DiagonalMovementCalc:;
+			//go up and right adding moves until we hit a piece, if enemy piece save it too
+		int8_t cY = givenPiece.y + 1;
+		int8_t cX = givenPiece.x + 1;
+		while (cX < BoardDim && cY < BoardDim) {
+			if (games[curDepth].board.p[cX][cY][Owner] == curPlayer) {
+				break;
+			} else if (games[curDepth].board.p[cX][cY][Owner] == !curPlayer) {
+				Moves[curDepth][MoveCount[curDepth]][X] = cX;
+				Moves[curDepth][MoveCount[curDepth]][Y] = cY;
+				MoveCount[curDepth]++;
+				break;
+			}
+			Moves[curDepth][MoveCount[curDepth]][X] = cX;
+			Moves[curDepth][MoveCount[curDepth]][Y] = cY;
+			MoveCount[curDepth]++;
+			cX++;
+			cY++;
+		}
+
+		//go down and right adding moves until we hit a piece, if enemy piece save it too
+		cY = givenPiece.y - 1;
+		cX = givenPiece.x + 1;
+		while (cX < BoardDim && cY >= 0) {
+			if (games[curDepth].board.p[cX][cY][Owner] == curPlayer) {
+				break;
+			} else if (games[curDepth].board.p[cX][cY][Owner] == !curPlayer) {
+				Moves[curDepth][MoveCount[curDepth]][X] = cX;
+				Moves[curDepth][MoveCount[curDepth]][Y] = cY;
+				MoveCount[curDepth]++;
+				break;
+			}
+			Moves[curDepth][MoveCount[curDepth]][X] = cX;
+			Moves[curDepth][MoveCount[curDepth]][Y] = cY;
+			MoveCount[curDepth]++;
+			cX++;
+			cY--;
+		}
+
+		//go up and left adding moves until we hit a piece, if enemy piece save it too
+		cY = givenPiece.y + 1;
+		cX = givenPiece.x - 1;
+		while (cX >= 0 && cY < BoardDim) {
+			if (games[curDepth].board.p[cX][cY][Owner] == curPlayer) {
+				break;
+			} else if (games[curDepth].board.p[cX][cY][Owner] == !curPlayer) {
+				Moves[curDepth][MoveCount[curDepth]][X] = cX;
+				Moves[curDepth][MoveCount[curDepth]][Y] = cY;
+				MoveCount[curDepth]++;
+				break;
+			}
+			Moves[curDepth][MoveCount[curDepth]][X] = cX;
+			Moves[curDepth][MoveCount[curDepth]][Y] = cY;
+			MoveCount[curDepth]++;
+			cX--;
+			cY++;
+		}
+
+		//go down and left adding moves until we hit a piece, if enemy piece save it too
+		cY = givenPiece.y - 1;
+		cX = givenPiece.x - 1;
+		while (cX >= 0 && cY >= 0) {
+			if (games[curDepth].board.p[cX][cY][Owner] == curPlayer) {
+				break;
+			} else if (games[curDepth].board.p[cX][cY][Owner] == !curPlayer) {
+				Moves[curDepth][MoveCount[curDepth]][X] = cX;
+				Moves[curDepth][MoveCount[curDepth]][Y] = cY;
+				MoveCount[curDepth]++;
+				break;
+			}
+			Moves[curDepth][MoveCount[curDepth]][X] = cX;
+			Moves[curDepth][MoveCount[curDepth]][Y] = cY;
+			MoveCount[curDepth]++;
+			cX--;
+			cY--;
+		}
+		goto DoneMoveGen;
+	} 
+	else if (givenPiece.type == Queen) {
+		goto LinearMovementCalc;
+	} 
+	else if (givenPiece.type == King) {
+		//flags
+		uint right = givenPiece.x < (BoardDim - 2);
+		uint down = givenPiece.y > 0;
+		uint left = givenPiece.x > 0;
+		uint up = givenPiece.y < (BoardDim - 2);
+
+		//right
+		if (games[curDepth].board.p[givenPiece.x + 1][givenPiece.y][Owner] != curPlayer && right) {
+			Moves[curDepth][MoveCount[curDepth]][X] = givenPiece.x + 1;
+			Moves[curDepth][MoveCount[curDepth]][Y] = givenPiece.y;
+			MoveCount[curDepth]++;
+		}
+
+		//down right one
+		if (games[curDepth].board.p[givenPiece.x + 1][givenPiece.y - 1][Owner] != curPlayer && (right & down)) {
+			Moves[curDepth][MoveCount[curDepth]][X] = givenPiece.x + 1;
+			Moves[curDepth][MoveCount[curDepth]][Y] = givenPiece.y - 1;
+			MoveCount[curDepth]++;
+		}
+
+		//down
+		if (games[curDepth].board.p[givenPiece.x][givenPiece.y - 1][Owner] != curPlayer && (down)) {
+			Moves[curDepth][MoveCount[curDepth]][X] = givenPiece.x;
+			Moves[curDepth][MoveCount[curDepth]][Y] = givenPiece.y - 1;
+			MoveCount[curDepth]++;
+		}
+
+		//down left one
+		if (games[curDepth].board.p[givenPiece.x - 1][givenPiece.y - 1][Owner] != curPlayer && (left & down)) {
+			Moves[curDepth][MoveCount[curDepth]][X] = givenPiece.x - 1;
+			Moves[curDepth][MoveCount[curDepth]][Y] = givenPiece.y - 1;
+			MoveCount[curDepth]++;
+		}
+
+		//left
+		if (games[curDepth].board.p[givenPiece.x - 1][givenPiece.y][Owner] != curPlayer && left) {
+			Moves[curDepth][MoveCount[curDepth]][X] = givenPiece.x - 1;
+			Moves[curDepth][MoveCount[curDepth]][Y] = givenPiece.y;
+			MoveCount[curDepth]++;
+		}
+
+		//left up one
+		if (games[curDepth].board.p[givenPiece.x - 1][givenPiece.y + 1][Owner] != curPlayer && (left & up)) {
+			Moves[curDepth][MoveCount[curDepth]][X] = givenPiece.x - 1;
+			Moves[curDepth][MoveCount[curDepth]][Y] = givenPiece.y + 1;
+			MoveCount[curDepth]++;
+		}
+
+		//up one
+		if (games[curDepth].board.p[givenPiece.x][givenPiece.y + 1][Owner] != curPlayer && (up)) {
+			Moves[curDepth][MoveCount[curDepth]][X] = givenPiece.x;
+			Moves[curDepth][MoveCount[curDepth]][Y] = givenPiece.y + 1;
+			MoveCount[curDepth]++;
+		}
+
+		//up right one
+		if (games[curDepth].board.p[givenPiece.x + 1][givenPiece.y + 1][Owner] != curPlayer && (up & right)) {
+			Moves[curDepth][MoveCount[curDepth]][X] = givenPiece.x + 1;
+			Moves[curDepth][MoveCount[curDepth]][Y] = givenPiece.y + 1;
+			MoveCount[curDepth]++;
+		}
+
+	}
+	if (givenPiece.type == Queen) {
+		goto DiagonalMovementCalc;
+	}
+	
+
+	DoneMoveGen:;
+	//if no legal moves were generated, move on to the next peice
+	//go to the code that handles this
+	if (MoveCount[curDepth] == 0) {
+		goto SelectNext;
+	}
+
+
+
+}*/
+
 
 
 
