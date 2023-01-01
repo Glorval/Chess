@@ -111,6 +111,14 @@ void printBitboard(const u64 board){
 	}
 }
 
+void printPlayer(const Player player, u8 playerColour) {
+	printf("Printing %s's pieces. Count = %u.   ", PlayerStrings[playerColour], player.PieceC);
+	for (u8 cP = 0; cP < player.PieceC; cP++) {
+		printf("#%u=%c, ", cP, PiecesSymbol[player.Pieces[cP].type]);
+	}
+}
+
+
 //COMPAT_PRINT makes it not use 24 bit colours (Not implemented in this version)
 void printGame(const Game* game) {
 	const static char yLables[] = "12345678";
@@ -287,12 +295,51 @@ void makeMove(Game* game, const Move move) {
 		game->players[!move.player].PieceC--;
 		game->players[!move.player].Pieces[indTwo] = game->players[!move.player].Pieces[game->players[!move.player].PieceC];
 	} else if (move.moveFlags == MV_BOO) {
-		const u8 indOne = move.pieceInds MV_PIND_ONE;
-		const u8 indTwo = move.pieceInds MV_PIND_TWO;
+		const u8 indOne = move.pieceInds;
+		const u8 indTwo = move.newPos;
 
 		//Remove both original positions, then update piece list positions and use that to add in their new positions
 		game->boards[move.player] ^= BPosC(game->players[move.player].Pieces[indOne].pos);
 		game->boards[move.player] ^= BPosC(game->players[move.player].Pieces[indTwo].pos);
+		game->players[move.player].Pieces[indOne].pos = MV_BOO_K_POS;
+		game->players[move.player].Pieces[indTwo].pos = MV_BOO_R_POS;
+		game->boards[move.player] |= BPosC(MV_BOO_K_POS);
+		game->boards[move.player] |= BPosC(MV_BOO_R_POS);
+	} else if (move.moveFlags == MV_BOOO) {
+		const u8 indOne = move.pieceInds;
+		const u8 indTwo = move.newPos;
+
+		//Remove both original positions, then update piece list positions and use that to add in their new positions
+		game->boards[move.player] ^= BPosC(game->players[move.player].Pieces[indOne].pos);
+		game->boards[move.player] ^= BPosC(game->players[move.player].Pieces[indTwo].pos);
+		game->players[move.player].Pieces[indOne].pos = MV_BOOO_K_POS;
+		game->players[move.player].Pieces[indTwo].pos = MV_BOOO_R_POS;
+		game->boards[move.player] |= BPosC(MV_BOOO_K_POS);
+		game->boards[move.player] |= BPosC(MV_BOOO_R_POS);
+	} else if (move.moveFlags == MV_WOOO) {
+		const u8 indOne = move.pieceInds;
+		const u8 indTwo = move.newPos;
+
+		//Remove both original positions, then update piece list positions and use that to add in their new positions
+		game->boards[move.player] ^= BPosC(game->players[move.player].Pieces[indOne].pos);
+		game->boards[move.player] ^= BPosC(game->players[move.player].Pieces[indTwo].pos);
+		game->players[move.player].Pieces[indOne].pos = MV_WOOO_K_POS;
+		game->players[move.player].Pieces[indTwo].pos = MV_WOOO_R_POS;
+		game->boards[move.player] |= BPosC(MV_WOOO_K_POS);
+		game->boards[move.player] |= BPosC(MV_WOOO_R_POS);
+	} else if (move.moveFlags == MV_WOO) {
+		const u8 indOne = move.pieceInds;
+		const u8 indTwo = move.newPos;
+
+		//Remove both original positions, then update piece list positions and use that to add in their new positions
+		game->boards[move.player] ^= BPosC(game->players[move.player].Pieces[indOne].pos);
+		game->boards[move.player] ^= BPosC(game->players[move.player].Pieces[indTwo].pos);
+		game->players[move.player].Pieces[indOne].pos = MV_WOO_K_POS;
+		game->players[move.player].Pieces[indTwo].pos = MV_WOO_R_POS;
+		game->boards[move.player] |= BPosC(MV_WOO_K_POS);
+		game->boards[move.player] |= BPosC(MV_WOO_R_POS);
 	}
+
+
 	
 }

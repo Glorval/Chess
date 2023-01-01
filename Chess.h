@@ -77,6 +77,7 @@ typedef int64_t i64;
 #define setFullWhiteBack printf("\33[48;2;255;255;255m")
 #define setFullWhiteFore printf("\33[38;2;255;255;255m")
 
+const static char PlayerStrings[2][6] = {"White", "Black"};
 
 ////////////////
 ///Piece data///
@@ -126,7 +127,8 @@ struct gamestate {
 	u64 boards[2];//White board/black board
 	Player players[2];//White/black
 	u8 MemoryFlags;
-	u8 EnPassP;//The x/y that the double move pawn is on.
+	u8 EnPassPos;//The x/y that the double move pawn is on.
+	u8 EnPassInd;//The piece index of the en passant (Should always be seen from the opponent's perspective, as in the opponnent makes the double move, it stores here, then on your turn you see this set) 
 	u8 CurPlayer;//Not in flags for easier access, idk
 };
 typedef struct gamestate Game;
@@ -152,8 +154,18 @@ struct move {
 };
 typedef struct move Move;
 
-#define MV_BOO_K_POS sPos()
+//Constants for castling positions so as to not have to calculate them out
+#define MV_BOO_K_POS sPos(G,7)
+#define MV_BOO_R_POS sPos(F,7)
 
+#define MV_BOOO_K_POS sPos(C,7)
+#define MV_BOOO_R_POS sPos(D,7)
+
+#define MV_WOO_K_POS sPos(G,0)
+#define MV_WOO_R_POS sPos(F,0)
+
+#define MV_WOOO_K_POS sPos(C,0)
+#define MV_WOOO_R_POS sPos(D,0)
 
 ///////////////
 ///Functions///
@@ -168,6 +180,10 @@ void printGame(const Game* game);
 
 //prints out a bitboard as 1s and 0s
 void printBitboard(const u64 board);
+
+//prints out the player's pieces with the index. No newline
+void printPlayer(const Player player, u8 playerColour);
+
 
 //Makes a move and updates the given gamestate. Does not check legality
 void makeMove(Game* game, const Move move);
